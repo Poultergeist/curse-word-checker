@@ -1,5 +1,6 @@
 import mysql.connector
-from src.config.settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+from config.settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+import random
 
 def execute_db_query(query: str, params=None, fetch: bool = False):
     """
@@ -11,7 +12,7 @@ def execute_db_query(query: str, params=None, fetch: bool = False):
         fetch (bool): Whether to fetch and return results
         
     Returns:
-        list or None: Query results if fetch=True, None otherwise
+          list or None: Query results if fetch=True, None otherwise
         
     Raises:
         Exception: If database operation fails
@@ -64,7 +65,7 @@ def add_banned_word(word: str, chat_id: int, user_id: int, chat_name: str):
     """Add word to banned words list for chat"""
     ensure_chat_exists(chat_id, chat_name)
     execute_db_query(
-        "INSERT INTO words (word, chat_id, who_banned) VALUES (%s, %s, %s)",
+        "INSERT IGNORE INTO words (word, chat_id, who_banned) VALUES (%s, %s, %s)",
         (word.lower(), chat_id, user_id)
     )
 
@@ -166,15 +167,16 @@ def add_message(message_data: dict):
     """Add message to database"""
     execute_db_query(
         """
-        INSERT INTO messages (chat_id, user_id, message_id, text, timestamp)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO logs (chat_id, user_id, message_id, message_text, timestamp, username)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """,
         (
             message_data["chat_id"],
             message_data["user_id"],
             message_data["message_id"],
             message_data["text"],
-            message_data["timestamp"]
+            message_data["timestamp"],
+            message_data["username"]
         )
     )
 
@@ -182,18 +184,25 @@ def show_messages_by_chat(chat_id: int, timestamp: str = None):
     """Get messages for chat with optional timestamp filter"""
     if timestamp:
         return execute_db_query(
-            "SELECT * FROM messages WHERE chat_id = %s AND timestamp >= %s",
+            "SELECT * FROM logs WHERE chat_id = %s AND timestamp >= %s",
             (chat_id, timestamp),
             fetch=True
         )
     return execute_db_query(
-        "SELECT * FROM messages WHERE chat_id = %s",
+        "SELECT * FROM logs WHERE chat_id = %s",
         chat_id,
         fetch=True
     )
 
-def has_moderators(chat_id: int) -> bool:
+def has_moderators(chat_id: int, with_superadmin: bool = False) -> bool:
     """Check if chat has any moderators"""
+    if with_superadmin:
+        result = execute_db_query(
+            "SELECT COUNT(*) FROM user_is_moderator WHERE chat_id = %s OR chat_id = 0",
+            chat_id,
+            fetch=True
+        )
+        return result and result[0][0] > 0
     result = execute_db_query(
         "SELECT COUNT(*) FROM user_is_moderator WHERE chat_id = %s",
         chat_id,
@@ -202,36 +211,61 @@ def has_moderators(chat_id: int) -> bool:
     return result and result[0][0] > 0
 
 def get_message_template(chat_id: int) -> str:
-    """Get message template for chat"""
+    """
+    Get a random message template for chat
+    
+    Args:
+        chat_id (int): ID чату
+        
+    Returns:
+        str: Random message template or None if no templates exist
+    """
     result = execute_db_query(
-        "SELECT template FROM message_templates WHERE chat_id = %s AND is_active = 1",
+        "SELECT template_text FROM message_templates WHERE chat_id = %s",
         chat_id,
         fetch=True
     )
-    return result[0][0] if result else None
+    if not result:
+        return None
+    return random.choice(result)[0]
 
 def add_message_template(chat_id: int, template_text: str):
     """Add new message template for chat"""
+    template_id = execute_db_query(
+        "SELECT MAX(template_id) FROM message_templates WHERE chat_id = %s",
+        chat_id,
+        fetch=True
+    )[0][0]
+    if template_id is not None:
+        template_id += 1
+    else:
+        template_id = 1
     execute_db_query(
-        "UPDATE message_templates SET is_active = 0 WHERE chat_id = %s",
-        chat_id
-    )
-    execute_db_query(
-        "INSERT INTO message_templates (chat_id, template, is_active) VALUES (%s, %s, 1)",
-        (chat_id, template_text)
+        "INSERT INTO message_templates (chat_id, template_id, template_text) VALUES (%s, %s, %s)",
+        (chat_id, template_id, template_text)
     )
 
 def remove_message_template(chat_id: int, template_id: int):
     """Remove message template"""
     execute_db_query(
-        "DELETE FROM message_templates WHERE id = %s AND chat_id = %s",
+        "DELETE FROM message_templates WHERE template_id = %s AND chat_id = %s",
         (template_id, chat_id)
     )
 
 def list_message_templates(chat_id: int):
     """Get list of message templates for chat"""
     return execute_db_query(
-        "SELECT id, template, is_active FROM message_templates WHERE chat_id = %s",
+        "SELECT template_id, template_text FROM message_templates WHERE chat_id = %s",
         chat_id,
         fetch=True
-    ) 
+    )
+
+def reorder_template_ids(chat_id: int) -> None:
+    """Reorder template IDs sequentially for a given chat."""
+    templates = list_message_templates(chat_id)
+    for index, template in enumerate(templates, start=1):
+        update_template_id(chat_id, template[0], index)
+
+def update_template_id(chat_id: int, old_id: int, new_id: int) -> None:
+    """Update a specific template ID."""
+    execute_db_query("UPDATE message_templates SET template_id = %s WHERE chat_id = %s AND template_id = %s", (new_id, chat_id, old_id))

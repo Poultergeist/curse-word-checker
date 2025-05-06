@@ -1,21 +1,55 @@
 # Telegram Curse Word Bot
 
-Бот для модерації заборонених слів у Telegram-чатах.
+Бот для Telegram, який допомагає модераторам чатів контролювати використання заборонених слів.
 
 ## Функціональність
 
-- Заборона та розборона слів
+- Перевірка повідомлень на наявність заборонених слів
+- Автоматичне видалення повідомлень з забороненими словами (опціонально)
+- Налаштовувані шаблони попереджень
 - Система модераторів
-- Налаштовувані шаблони повідомлень
-- Автоматичне видалення повідомлень
 - Логування повідомлень
-- Перегляд історії повідомлень
+
+## Команди
+
+### Управління словами
+- `/word ban <слова>` - забанити одне або кілька слів (наприклад: `/word ban слово1 слово2`)
+- `/word unban <слова>` - розбанити одне або кілька слів (наприклад: `/word unban слово1 слово2`)
+- `/word list` - показати список забанених слів
+- `/word clear` - очистити всі забанені слова
+
+### Управління модераторами
+- **Відповідь на повідомлення користувача** `/mod add` - додати модератора
+- **Відповідь на повідомлення користувача** `/mod delete` - видалити модератора
+- `/mod list` - показати список модераторів
+
+### Управління шаблонами
+- `/template add <текст>` - додати шаблон повідомлення
+- `/template delete <id>` - видалити шаблон
+- `/template list` - показати список шаблонів
+
+### Інші команди
+- `/messages [timestamp]` - показати останні повідомлення
+- `/delete [on|off]` - увімкнути/вимкнути автоматичне видалення повідомлень
+- `/help [команда] [підкоманда]` - показати допомогу
+
+## Шаблони повідомлень
+
+Шаблони можуть містити опціональні плейсхолдери:
+- `{name}` - ім'я користувача
+- `{word}` - заборонене слово
+
+Приклади шаблонів:
+- "Привіт, {name}!"
+- "Не використовуй слово {word}!"
+- "Привіт, {name}! Не використовуй слово {word}!"
+- "Це слово заборонено!"
 
 ## Встановлення
 
 1. Клонуйте репозиторій:
 ```bash
-git clone https://github.com/yourusername/curse-word-bot.git
+git clone https://github.com/your-username/curse-word-bot.git
 cd curse-word-bot
 ```
 
@@ -28,65 +62,61 @@ venv\Scripts\activate  # для Windows
 pip install -r requirements.txt
 ```
 
-3. Створіть файл `.env` на основі `.env.example` та заповніть необхідні змінні:
+3. Створіть файл `.env` на основі `.env.example`:
 ```bash
 cp .env.example .env
 ```
 
-4. Створіть базу даних та таблиці:
+4. Налаштуйте змінні середовища в `.env`:
+```
+DB_HOST=host
+DB_USER=user
+DB_PASSWORD=password
+DB_NAME=database_name
+
+TELEGRAM_BOT_API=telegram_bot_api_key
+
+LOG_DIR=logs
+LOG_FILE=message_log.json
+LOG_MAX_SIZE=10485760  # 10MB in bytes
+
+DEFAULT_TEMPLATE="Default template {name} {word}"
+```
+
+5. Створіть базу даних та таблиці:
 ```bash
 mysql -u your_username -p your_database < structure.sql
 ```
 
-## Запуск
-
+6. Запустіть бота:
 ```bash
 python src/main.py
 ```
 
-## Команди
+## Запуск на сервері
 
-- `/ban <word>` - Заборонити слово
-- `/unban <word>` - Розборонити слово
-- `/list` - Показати список заборонених слів
-- `/addmod` - Додати модератора (відповідь на повідомлення користувача)
-- `/delmod` - Видалити модератора (відповідь на повідомлення модератора)
-- `/mods` - Показати список модераторів
-- `/clear` - Очистити всі заборонені слова
-- `/messages [timestamp]` - Показати останні повідомлення
-- `/delete [on|off]` - Увімкнути/вимкнути автоматичне видалення повідомлень
-- `/template <text>` - Додати шаблон повідомлення
-- `/deltemplate <id>` - Видалити шаблон повідомлення
-- `/templates` - Показати список шаблонів
-- `/help [command]` - Показати довідку
-
-## Структура проекту
-
+Для запуску бота в фоновому режимі на сервері можна використовувати `nohup`:
+```bash
+nohup python src/main.py > bot.log 2>&1 &
 ```
-curse-word-bot/
-├── src/
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── settings.py
-│   ├── database/
-│   │   ├── __init__.py
-│   │   └── db.py
-│   ├── handlers/
-│   │   ├── __init__.py
-│   │   └── commands.py
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   └── logger.py
-│   ├── __init__.py
-│   └── main.py
-├── logs/
-├── .env
-├── .env.example
-├── requirements.txt
-├── structure.sql
-└── README.md
+
+Або створити systemd сервіс:
+```ini
+[Unit]
+Description=Telegram Curse Word Bot
+After=network.target
+
+[Service]
+User=your_user
+WorkingDirectory=/path/to/curse-word-bot
+Environment=PYTHONPATH=/path/to/curse-word-bot
+ExecStart=/path/to/curse-word-bot/venv/bin/python src/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ## Ліцензія
 
-MIT 
+MIT
