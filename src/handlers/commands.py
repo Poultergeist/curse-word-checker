@@ -4,6 +4,7 @@ from telegram.ext import CallbackContext, ContextTypes
 from database import db
 from utils.logger import log_message, log_system_event
 from config.settings import DEFAULT_TEMPLATE
+import re
 
 async def check_message(update: Update, context: CallbackContext) -> None:
     """Check messages for banned words"""
@@ -17,12 +18,16 @@ async def check_message(update: Update, context: CallbackContext) -> None:
         )
         args = parcer.parse_args()
         RAT_MODE = args.rat
+
+        if not update.message or not update.message.text:
+            return
         
-        log_system_event('rat_mode_enabled', {
-                'rat_mode': RAT_MODE
-            }, 'INFO'
-        )
-        
+        if RAT_MODE:
+            log_system_event('rat_mode_enabled', {
+                    'rat_mode': RAT_MODE
+                }, 'INFO'
+            )
+
         message_data = {
             'message_id': update.message.message_id,
             'chat_id': update.effective_chat.id,
@@ -33,27 +38,24 @@ async def check_message(update: Update, context: CallbackContext) -> None:
             'rat': RAT_MODE
         }
         
-        print(RAT_MODE)
-        
         if RAT_MODE:
             # Log message
             log_message(message_data)
             
             log_system_event(
-                'message_received',
+                'message_received_rat',
                 message_data
             )
-        
-        if not update.message or not update.message.text:
-            return
 
         # Check message for banned words
         chat_id = update.effective_chat.id
         banned_words = db.get_banned_words(chat_id)
-        bad_words = [] 
+        bad_words = []
+        
+        message = re.sub(r"[^\w\s']", ' ', update.message.text)
         
         # Split message text into words for whole-word matching
-        message_words = set(update.message.text.lower().split())
+        message_words = set(message.lower().split())
         
         for word in banned_words:
             if word.lower() in message_words:

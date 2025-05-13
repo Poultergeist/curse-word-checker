@@ -62,8 +62,6 @@ def log_message(message_data: Dict[str, Any]) -> None:
         # Add timestamp to message data
         message_data['timestamp'] = datetime.now().isoformat()
         
-        print('is_banned' in message_data)
-        
         if 'is_banned' in message_data:
             db.add_message(message_data)
         

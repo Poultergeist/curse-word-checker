@@ -1,6 +1,7 @@
 import mysql.connector
 from config.settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 import random
+from utils.logger import log_system_event
 
 def execute_db_query(query: str, params=None, fetch: bool = False):
     """
@@ -44,7 +45,11 @@ def execute_db_query(query: str, params=None, fetch: bool = False):
             
         return result
     except Exception as e:
-        print(f"Database error: {e}")
+        log_system_event(
+            'db_error',
+            {'error': str(e), 'query': query, 'params': params},
+            'ERROR'
+        )
         if conn:
             conn.rollback()
         raise e
