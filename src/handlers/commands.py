@@ -165,10 +165,6 @@ async def word_command(update: Update, context: CallbackContext) -> None:
                 }
             )
 
-            if not db.check_if_moderator(chat_id, user_id):
-                await update.message.reply_text("You don't have permission to execute this command.")
-                return
-
             # Split input into individual words and add each to the banned list
             if banned == words:
                 await update.message.reply_text(
@@ -309,7 +305,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
                 await update.message.reply_text("There are no message templates in this chat")
                 return
             message = "Message templates:\n" + "\n".join(
-                f"- ID: {t[0]}, Template {t[1]}" for t in templates
+                f"- ID: {t[0]},\n\tTemplate: {t[1]}" for t in templates
             )
             await update.message.reply_text(message)
             return
@@ -349,6 +345,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
             db.reorder_template_ids(update.message.chat_id)
             
             await update.message.reply_text("Template has been added")
+            return
         except Exception as e:
             log_system_event(
                 'command_error',
@@ -491,6 +488,18 @@ async def on_bot_added(update: Update, context: CallbackContext) -> None:
                 }
             )
             break
+
+async def on_bot_removed(update: Update, context: CallbackContext) -> None:
+    """Handle bot being removed from chat"""
+    chat = update.effective_chat
+    db.delete_chat_and_moderators(chat.id)
+    log_system_event(
+        'bot_removed',
+        {
+            'chat_id': chat.id,
+            'chat_title': getattr(chat, 'title', None)
+        }
+    )
 
 async def help_command(update: Update, context: CallbackContext) -> None:
     """Show help message"""

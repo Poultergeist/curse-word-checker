@@ -97,7 +97,10 @@ def check_if_moderator(chat_id: int, user_id: int):
         user_id,
         fetch=True
     )
-    return result is not None and (result[0][0] == chat_id or result[0][0] == 0)
+    # Fix: handle empty result
+    if not result:
+        return False
+    return result[0][0] == chat_id or result[0][0] == 0
 
 def new_moderator(user_id: int, username: str, chat_id: int) -> str:
     """Add new moderator to chat"""
@@ -187,12 +190,22 @@ def add_message(message_data: dict):
 
 def show_messages_by_chat(chat_id: int, timestamp: str = None):
     """Get messages for chat with optional timestamp filter"""
+    # If timestamp is provided, return messages from that timestamp onwards
     if timestamp:
         return execute_db_query(
             "SELECT * FROM logs WHERE chat_id = %s AND timestamp >= %s",
             (chat_id, timestamp),
             fetch=True
         )
+        
+    # If no chat_id, return all messages
+    if not chat_id:
+        return execute_db_query(
+            "SELECT * FROM logs",
+            fetch=True
+        )
+        
+    # If chat_id is provided, return messages for that chat
     return execute_db_query(
         "SELECT * FROM logs WHERE chat_id = %s",
         chat_id,
@@ -274,3 +287,29 @@ def reorder_template_ids(chat_id: int) -> None:
 def update_template_id(chat_id: int, old_id: int, new_id: int) -> None:
     """Update a specific template ID."""
     execute_db_query("UPDATE message_templates SET template_id = %s WHERE chat_id = %s AND template_id = %s", (new_id, chat_id, old_id))
+
+def delete_chat_and_moderators(chat_id: int):
+    """Delete chat and all connected moderators from database"""
+    # Remove moderators for this chat
+    execute_db_query(
+        "DELETE FROM user_is_moderator WHERE chat_id = %s",
+        chat_id
+    )
+    # Remove chat itself
+    execute_db_query(
+        "DELETE FROM chats WHERE id = %s",
+        chat_id
+    )
+    # Optionally, remove other chat-related data (words, templates, logs)
+    execute_db_query(
+        "DELETE FROM words WHERE chat_id = %s",
+        chat_id
+    )
+    execute_db_query(
+        "DELETE FROM message_templates WHERE chat_id = %s",
+        chat_id
+    )
+    execute_db_query(
+        "DELETE FROM logs WHERE chat_id = %s",
+        chat_id
+    )
