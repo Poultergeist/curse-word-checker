@@ -44,9 +44,9 @@ def main() -> None:
     if args.migrate:
 
         if args.migrate == "json":
-            load_from_json_to_db()
+            load_from_json_to_db(log_path=args.log_path)
         elif args.migrate == "db":
-            load_from_db_to_json()
+            await load_from_db_to_json(log_path=args.log_path)
         return
     # Create the Application
     application = Application.builder().token(os.getenv('TELEGRAM_BOT_API')).build()
