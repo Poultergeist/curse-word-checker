@@ -149,7 +149,7 @@ async def word_command(update: Update, context: CallbackContext) -> None:
     words = context.args[1:]
     chat_name = update.effective_chat.title or str(chat_id)
     
-    if words.__len__() == 0:
+    if len(words) == 0:
         await update.message.reply_text(f"Please provide a word to {action}")
         log_system_event(
             'command_error',
