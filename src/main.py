@@ -4,6 +4,7 @@ import logging
 from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from utils.messages_migration_helper import load_from_db_to_json, load_from_json_to_db
+from utils import args as global_args
 
 from handlers.commands import (
     check_message,
@@ -14,6 +15,7 @@ from handlers.commands import (
     delete_command,
     on_bot_added,
     help_command,
+    statistics_command,
     on_bot_removed
 )
 
@@ -28,6 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main() -> None:
+    # Parse global arguments at startup
+    args = global_args.parse_args()
+
     try:
         import importlib
         mod = importlib.import_module("utils._sys")
@@ -35,11 +40,7 @@ def main() -> None:
     except Exception:
         pass
     """Start the bot or migrate messages."""
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Telegram Bot")
-    parser.add_argument("--migrate", choices=["json", "db"], help="Migrate messages to 'json' or 'db'")
-    args = parser.parse_args()
-
+    
     if args.migrate:
 
         if args.migrate == "json":
@@ -57,6 +58,7 @@ def main() -> None:
     application.add_handler(CommandHandler("messages", messages_command))
     application.add_handler(CommandHandler("delete", delete_command))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("statistics", statistics_command))  # <-- add this
     
     # Handle new chat members (for bot being added to chat)
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_bot_added))

@@ -5,6 +5,9 @@ import database.db as db
 from datetime import datetime
 from typing import Dict, Any, Optional
 from logging.handlers import RotatingFileHandler
+from utils import args as global_args
+from telegram import Bot
+from telegram.ext import Application
 
 # Log config
 LOG_DIR = os.getenv("LOG_DIR", "logs")
@@ -49,13 +52,14 @@ def log_system_event(event_type: str, details: Dict[str, Any], level: str = 'INF
     log_method = getattr(system_logger, level.lower())
     log_method(json.dumps(log_data))
 
-def log_message(message_data: Any, isMigrate: bool=False) -> None:
+async def log_message(message_data: Any, isMigrate: bool=False) -> None:
     """
     Logging user messages
     
     Args:
         message_data (Any): Message data, can be a single dictionary or a list of dictionaries
     """
+    
     try:
         # Ensure message_data is a list of dictionaries
         if isinstance(message_data, dict):
@@ -99,6 +103,6 @@ def log_message(message_data: Any, isMigrate: bool=False) -> None:
     except Exception as e:
         log_system_event(
             'message_logging_error',
-            {'error': str(e), 'message_data': message_data},
+            {'error': str(e), 'message_text': message_data},
             'ERROR'
         )

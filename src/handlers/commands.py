@@ -1,47 +1,39 @@
-import argparse
 from telegram import Update, BotCommand, BotCommandScopeChat
 from telegram.ext import CallbackContext, ContextTypes
 from database import db
 from utils.logger import log_message, log_system_event
 from config.settings import DEFAULT_TEMPLATE
 import re
+from datetime import datetime
+from utils import args as global_args
 
 async def check_message(update: Update, context: CallbackContext) -> None:
-    """Check messages for banned words"""
+    """
+    Check messages for banned words
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     try:
-        parcer = argparse.ArgumentParser(description="Telegram Bot")
-        parcer.add_argument(
-            "-r",
-            "--rat",
-            action="store_true",
-            help="Enable RAT mode"
-        )
-        args = parcer.parse_args()
+        args = global_args.parse_args()
         RAT_MODE = args.rat
 
         if not update.message or not update.message.text:
             return
-        
-        if RAT_MODE:
-            log_system_event('rat_mode_enabled', {
-                    'rat_mode': RAT_MODE
-                }, 'INFO'
-            )
 
         message_data = {
             'message_id': update.message.message_id,
             'chat_id': update.effective_chat.id,
             'user_id': update.effective_user.id,
             'username': update.effective_user.username,
-            'text': update.message.text,
+            'message_text': update.message.text,
             'date': update.message.date.isoformat(),
             'rat': RAT_MODE
         }
         
         if RAT_MODE:
-            # Log message
-            log_message(message_data)
-            
+            await log_message(message_data)
             log_system_event(
                 'message_received_rat',
                 message_data
@@ -57,24 +49,27 @@ async def check_message(update: Update, context: CallbackContext) -> None:
         # Split message text into words for whole-word matching
         message_words = set(message.lower().split())
         
+        # Check each banned word against the message
         for word in banned_words:
             if word.lower() in message_words:
                 bad_words.append(word)
                 
         if bad_words:
             template = db.get_message_template(chat_id) or DEFAULT_TEMPLATE
+            
             # Preparation of parameters for formatting
             format_params = {}
             if '{name}' in template:
                 format_params['name'] = update.message.from_user.first_name
             if '{word}' in template:
                 format_params['word'] = ', '.join(bad_words)
+            
             # Formatting the template with available parameters
             warning = template.format(**format_params)
             await update.message.reply_text(warning)
             message_data['is_banned'] = True
             message_data['banned_words'] = bad_words
-            log_message(message_data)
+            await log_message(message_data)
             
             log_system_event(
                 'message_received',
@@ -94,9 +89,16 @@ async def check_message(update: Update, context: CallbackContext) -> None:
             },
             'ERROR'
         )
+        await update.message.reply_text("An error occurred while executing the command.")
 
 async def word_command(update: Update, context: CallbackContext) -> None:
-    """Handle word-related commands"""
+    """
+    Handle word-related commands
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not context.args:
         await update.message.reply_text("Please specify action: ban, unban, list, or clear")
         return
@@ -105,22 +107,38 @@ async def word_command(update: Update, context: CallbackContext) -> None:
     if action not in ['ban', 'unban', 'list', 'clear']:
         await update.message.reply_text("Invalid action. Use: ban, unban, list, or clear")
         return
+    
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
 
     if action == 'list':
-        words = db.get_banned_words(update.message.chat_id)
+        words = db.get_banned_words(chat_id)
+        
         if not words:
             await update.message.reply_text("No banned words in this chat")
             return
-        message = "Banned words:\n" + "\n".join(f"- {word}" for word in words)
-        await update.message.reply_text(message)
+        
+        await update.message.reply_text("Banned words:\n" + "\n".join(f"- {word}" for word in words))
         return
 
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
+    if not db.check_if_moderator(chat_id, update.message.from_user.id):
         await update.message.reply_text("You are not a moderator")
+        
+        log_system_event(
+            'access_denied',
+            {
+                'command': 'word',
+                'action': action,
+                'user_id': update.effective_user.id,
+                'username': update.effective_user.username,
+            },
+            "WARNING"
+        )
+        
         return
 
     if action == 'clear':
-        db.clear_words_by_chat(update.message.chat_id)
+        db.clear_words_by_chat(chat_id)
         await update.message.reply_text("All banned words have been cleared")
         return
 
@@ -129,9 +147,6 @@ async def word_command(update: Update, context: CallbackContext) -> None:
         return
 
     words = context.args[1:]
-    
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
     chat_name = update.effective_chat.title or str(chat_id)
     
     if words.__len__() == 0:
@@ -167,14 +182,18 @@ async def word_command(update: Update, context: CallbackContext) -> None:
 
             # Split input into individual words and add each to the banned list
             if banned == words:
+                # If all words are already banned, reply with a message
                 await update.message.reply_text(
                     f"Words '{', '.join(words)}' are already banned."
                 )
                 return
             for word in not_banned:
                 db.add_banned_word(word, chat_id, user_id, chat_name)
+                
+            # Reply with confirmation message
             await update.message.reply_text(
-                f"Words '{', '.join([w for w in words if w.lower() not in banned])}' have been added to the banned list." + (banned and f" Already banned: {', '.join(banned)}" if banned else "")
+                f"Words '{', '.join([w for w in words if w.lower() not in banned])}' have been added to the banned list."
+                + (banned and f" Already banned: {', '.join(banned)}" if banned else "")
             )
             
         except Exception as e:
@@ -201,15 +220,20 @@ async def word_command(update: Update, context: CallbackContext) -> None:
                     'chat_id': chat_id
                 }
             )
+            
+            # Split input into individual words and remove each from the banned list
             if not_banned == words:
+                # If all words are not banned, reply with a message
                 await update.message.reply_text(
                     f"Words '{', '.join(words)}' are not banned."
                 )
                 return
             for word in banned:
                 db.remove_banned_word(word, update.message.chat_id)
+            # Reply with confirmation message
             await update.message.reply_text(
-                f"Words '{', '.join([w for w in words if w.lower() not in not_banned])}' have been removed from the banned list." + (not_banned and f" Already was unbanned: {', '.join(not_banned)}" if not_banned else "")
+                f"Words '{', '.join([w for w in words if w.lower() not in not_banned])}' have been removed from the banned list."
+                + (not_banned and f" Already was unbanned: {', '.join(not_banned)}" if not_banned else "")
             )
         except Exception as e:
             log_system_event(
@@ -225,11 +249,17 @@ async def word_command(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("An error occurred while executing the command.")
 
 async def mod_command(update: Update, context: CallbackContext) -> None:
-    """Handle moderator-related commands"""
+    """
+    Handle moderator-related commands
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not context.args:
         await update.message.reply_text("Please specify action: add, delete, or list")
         return
-        
+
     action = context.args[0].lower()
     if action not in ['add', 'delete', 'list']:
         await update.message.reply_text("Invalid action. Use: add, delete, or list")
@@ -237,6 +267,16 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         
     if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
         await update.message.reply_text("You are not a moderator")
+        log_system_event(
+            'access_denied',
+            {
+                'command': 'mod',
+                'action': action,
+                'user_id': update.effective_user.id,
+                'username': update.effective_user.username,
+            },
+            "WARNING"
+        )
         return
         
     if action == 'list':
@@ -244,8 +284,8 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         if not moderators:
             await update.message.reply_text("No moderators in this chat")
             return
-        message = "Moderators:\n" + "\n".join(f"- {m[1] or f'User {m[0]}'}" for m in moderators)
-        await update.message.reply_text(message)
+        
+        await update.message.reply_text("Moderators:\n" + "\n".join(f"- {m[1] or f'User {m[0]}'}" for m in moderators))
         return
 
     # Handle add/delete with reply to message
@@ -275,7 +315,13 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         return
 
 async def template_command(update: Update, context: CallbackContext) -> None:
-    """Handle template-related commands"""
+    """
+    Handle template-related commands
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not context.args:
         await update.message.reply_text("Please specify action: add, delete, or list")
         return
@@ -402,18 +448,16 @@ async def template_command(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("An error occurred while deleting the template.")
         return
     await update.message.reply_text("Invalid action. Use: add, delete, or list")
-
-async def clear_command(update: Update, context: CallbackContext) -> None:
-    """Clear all banned words"""
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
-        return
-        
-    db.clear_words_by_chat(update.message.chat_id)
-    await update.message.reply_text("All banned words have been cleared")
+    return
 
 async def messages_command(update: Update, context: CallbackContext) -> None:
-    """Show recent messages"""
+    """
+    Show recent messages
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
         await update.message.reply_text("You are not a moderator")
         return
@@ -431,30 +475,93 @@ async def messages_command(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(message)
 
 async def delete_command(update: Update, context: CallbackContext) -> None:
-    """Toggle message deletion"""
+    """
+    Toggle message deletion
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
         await update.message.reply_text("You are not a moderator")
         return
         
+    # Show current status
     if not context.args:
         current = db.delete_messages_check(update.message.chat_id)
         await update.message.reply_text(f"Message deletion is {'enabled' if current else 'disabled'}")
         return
         
+    # Check if argument is 'on' or 'off'
     value = context.args[0].lower()
     if value not in ['on', 'off']:
         await update.message.reply_text("Please use 'on' or 'off'")
         return
         
+    # Update deletion setting in database
     db.delete_messages_change(update.message.chat_id, value == 'on')
     await update.message.reply_text(f"Message deletion has been turned {value}")
 
+async def statistics_command(update: Update, context: CallbackContext) -> None:
+    """
+    Show statistics for today or a given date
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+    
+    # Empty flag to check if statistics are available
+    empty = True
+
+    # Parse date argument if provided
+    if context.args:
+        try:
+            date = datetime.strptime(context.args[0], "%d-%m-%y").date()
+        except Exception:
+            await update.message.reply_text("Please provide date in format dd-mm-yy")
+            return
+    else:
+        date = datetime.now().date()
+
+    stats = db.get_statistics(update.message.chat_id, date)
+    msg = f"📊 Statistics for {date.strftime('%d-%m-%Y')}:\n\n"
+    
+    if stats['user_stats']:
+        empty = False
+        msg += "👤 Top users (by banned words used):\n"
+        for i, (username, count) in enumerate(stats['user_stats'], 1):
+            msg += f"{i}. @{username or 'unknown'} — {count}\n"
+    msg += "\n"
+    
+    if stats['word_stats']:
+        empty = False
+        msg += "🚫 Top banned words used:\n"
+        for i, (word, count) in enumerate(stats['word_stats'], 1):
+            msg += f"{i}. {word} — {count}\n"
+    msg += "\n"
+    
+    if stats['most_banned_message']:
+        empty = False
+        msg += f"📝 Most banned message:\n{stats['most_banned_message'][0]}\n"
+    
+    if empty:
+        msg = "⛔️ No statistics available for this date. ⛔️"
+    
+    await update.message.reply_text(msg)
+
 async def on_bot_added(update: Update, context: CallbackContext) -> None:
-    """Handle bot being added to chat"""
+    """
+    Handle bot being added to chat
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not update.message or not update.message.new_chat_members:
         await update.message.reply_text("No new chat members")
         return
-        
+
     bot = context.bot
     for member in update.message.new_chat_members:
         if member.id == bot.id:
@@ -475,9 +582,12 @@ async def on_bot_added(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(
                 "Hello! I'm a curse word bot. Use /help to see available commands."
             )
+            
+            # Ensure chat exists in the database
             db.ensure_chat_exists(update.message.chat_id, update.message.chat.title)
             if not db.has_moderators(update.message.chat_id):
                 db.new_moderator(update.message.from_user.id, update.message.from_user.username, update.message.chat_id)
+            
             # Log bot added event
             log_system_event(
                 'bot_added',
@@ -490,7 +600,13 @@ async def on_bot_added(update: Update, context: CallbackContext) -> None:
             break
 
 async def on_bot_removed(update: Update, context: CallbackContext) -> None:
-    """Handle bot being removed from chat"""
+    """
+    Handle bot being removed from chat
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     chat = update.effective_chat
     db.delete_chat_and_moderators(chat.id)
     log_system_event(
@@ -502,7 +618,13 @@ async def on_bot_removed(update: Update, context: CallbackContext) -> None:
     )
 
 async def help_command(update: Update, context: CallbackContext) -> None:
-    """Show help message"""
+    """
+    Show help message
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
     if not context.args:
         # Show general help
         help_text = (
@@ -537,7 +659,16 @@ async def help_command(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(f"No help available for command {command}")
 
 def get_command_help(command: str, subcommand: str = None) -> str:
-    """Get help text for specific command"""
+    """
+    Get help text for specific command
+    
+    Args:
+        command (str): Command name
+        subcommand (str, optional): Subcommand name, defaults to None
+
+    Returns:
+        str: Help text for the command or subcommand
+    """
     help_texts = {
         "word": {
             None: "Word management commands\nUsage:\n/word ban <words> - Ban a word\n/word unban <words> - Remove banned word\n/word list - Show banned words\n/word clear - Clear all banned words",
@@ -560,6 +691,7 @@ def get_command_help(command: str, subcommand: str = None) -> str:
         },
         "messages": "Show recent messages\nUsage: /messages (optional)[timestamp]\nExample: /messages 2024-03-20",
         "delete": "Toggle automatic message deletion\nUsage: /delete [on|off]\nExample: /delete on",
+        "statistics": "Show statistics for today or a given date\nUsage: /statistics (optional)[dd-mm-yy]\nExample: /statistics 20-03-24",
         "help": {
             None: "Show help message\nUsage: /help [command]\nExample: /help word ban",
             "help": "Realy?"

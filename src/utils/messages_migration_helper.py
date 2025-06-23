@@ -56,7 +56,7 @@ def load_from_json_to_db(log_path: str) -> None:
         )
         raise e
       
-def load_from_db_to_json(log_path: str) -> None:
+async def load_from_db_to_json(log_path: str) -> None:
     """
     Load messages from the database into a JSON file.
     
@@ -91,7 +91,7 @@ def load_from_db_to_json(log_path: str) -> None:
         )
         return
       
-      log_message(messages, isMigrate=True)
+      await log_message(messages, isMigrate=True)
       
     except Exception as e:
         log_system_event(
