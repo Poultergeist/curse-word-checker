@@ -138,7 +138,12 @@ def check_if_moderator(chat_id: int, user_id: int) -> bool | int:
     # Fix: handle empty result
     if not result:
         return False
-    return result[0][0] == chat_id or result[0][0] == 0 and 0
+    if result[0][0] == chat_id:
+        return True
+    elif result[0][0] == 0:
+        return 0
+    else:
+        return False
 
 def new_moderator(user_id: int, username: str, chat_id: int) -> str:
     """
