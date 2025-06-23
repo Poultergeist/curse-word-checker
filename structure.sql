@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.41, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.42, for Linux (x86_64)
 --
 -- Host: localhost    Database: curse_word_bot
 -- ------------------------------------------------------
--- Server version	8.0.41-0ubuntu0.24.10.1
+-- Server version	8.0.42-0ubuntu0.24.10.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -44,6 +44,7 @@ CREATE TABLE `logs` (
   `chat_id` bigint DEFAULT NULL,
   `message_id` bigint NOT NULL,
   `timestamp` timestamp NOT NULL,
+  `banned_words` json DEFAULT NULL,
   PRIMARY KEY (`message_id`),
   KEY `user_id` (`user_id`),
   KEY `chat_id` (`chat_id`),
@@ -118,7 +119,7 @@ CREATE TABLE `words` (
   KEY `who_banned` (`who_banned`),
   CONSTRAINT `words_ibfk_1` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE,
   CONSTRAINT `words_ibfk_2` FOREIGN KEY (`who_banned`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -130,4 +131,4 @@ CREATE TABLE `words` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-05 14:44:47
+-- Dump completed on 2025-06-23 11:15:31

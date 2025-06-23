@@ -20,3 +20,6 @@ LOG_MAX_SIZE = int(os.getenv("LOG_MAX_SIZE", "10485760"))  # Default 10MB in byt
 
 # Message template settings
 DEFAULT_TEMPLATE = os.getenv("DEFAULT_TEMPLATE", "Hey, {name}, this word `{word}` is banned!") 
+
+# Debug chat ID
+DEBUG_CHAT_ID = os.getenv("DEBUG_CHAT_ID", None)  # Optional, can be None if not set
