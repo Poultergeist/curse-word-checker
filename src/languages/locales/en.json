@@ -1,0 +1,72 @@
+{
+  "error": "An error occurred while executing the command.",
+  "no_access": "You do not have permission to use this command.",
+  "word": {
+    "no_args": "Please specify action: ban, unban, list, or clear.",
+    "invalid_action": "Invalid action. Use: ban, unban, list, or clear.",
+    "list_empty": "No banned words in this chat.",
+    "list_header": "Banned Words:\n",
+    "cleared": "All banned words have been cleared.",
+    "too_short": "Please provide a word to {action}.",
+    "ban_banned": "Words '{', '.join(words)}' are already banned.",
+    "banned_success": "Words '{', '.join([w for w in words if w.lower() not in banned])}' have been added to the banned list.",
+    "already_banned": " Already banned: {', '.join(banned)}",
+    "unban_not_banned": "Words '{', '.join(words)}' are not banned.",
+    "unbanned_success": "Words '{', '.join([w for w in words if w.lower() not in not_banned])}' have been removed from the banned list.",
+    "already_unbanned": " Already was unbanned: {', '.join(not_banned)}"
+  },
+  "mod": {
+    "no_args": "Please specify action: add, delete, or list.",
+    "invalid_action": "Invalid action. Use: add, delete, or list.",
+    "list_empty": "No moderators in this chat.",
+    "list_header": "Moderators:\n",
+    "add_superadmin": "This user is a superadmin and cannot be added as a moderator.",
+    "add_already": "This user is already a moderator.",
+    "add_success": "User {username or user_id} is now a moderator.",
+    "delete_superadmin": "This user is a superadmin and cannot be removed as a moderator.",
+    "delete_success": "User {username or user_id} has been removed from moderators.",
+    "reply": "Please reply to the user you want to add/delete as a moderator"
+  },
+  "template": {
+    "no_args": "Please specify action: add, delete, or list.",
+    "invalid_action": "Invalid action. Use: add, delete, or list.",
+    "list_empty": "There are no message templates in this chat",
+    "list_header": "Message templates:\n",
+    "list_item": "- ID: {t[0]},\n\tTemplate: {t[1]}",
+    "add_no_text": "Please provide a template text to add.",
+    "add_success": "Template has been added",
+    "remove_no_id": "Please provide a template ID to remove.",
+    "remove_success": "Template has been removed",
+    "remove_value_error": "Invalid template ID. Please provide a valid number."
+  },
+  "messages": {
+    "recent": "Recent messages:\n",
+    "recent_item": "- @{m[1]}: {m[2]}",
+    "recent_empty": "Message not found."
+  },
+  "delete": {
+    "show": "Message deletion is {'enabled' if current else 'disabled'}",
+    "invalid_action": "Invalid action. Use: on or off.",
+    "switch": "Message deletion has been turned {value}"
+  },
+  "statistics": {
+    "format": "Please provide date in format dd-mm-yy",
+    "header": "📊 Statistics for {date.strftime('%d-%m-%Y')}:\n\n",
+    "users_header": "👤 Top users (by banned words used):\n",
+    "users_item": "{i}. @{username or 'unknown'} — {count}\n",
+    "words_header": "🚫 Top banned words used:\n",
+    "words_item": "{i}. {word} — {count}\n",
+    "most_banned": "📝 Most banned message:\n{stats['most_banned_message'][0]}\n",
+    "empty": "⛔️ No statistics available for this date. ⛔️"
+  },
+  "bot_add": {
+    "no_new": "No new chat members",
+    "welcome": "Hello! I'm a curse word bot. Use /help to see available commands."
+  },
+  "help": {
+    "help_short": {
+      "header": "Available commands:\n\n",
+      "word_header": "Word management:\n"
+    }
+  }
+}
