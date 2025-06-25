@@ -26,6 +26,7 @@ CREATE TABLE `chats` (
   `id` bigint NOT NULL,
   `name` varchar(255) NOT NULL,
   `delete_messages` tinyint(1) DEFAULT '0',
+  `locale` varchar(50) NOT NULL DEFAULT 'en',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -46,9 +47,7 @@ CREATE TABLE `logs` (
   `timestamp` timestamp NOT NULL,
   `banned_words` json DEFAULT NULL,
   PRIMARY KEY (`message_id`),
-  KEY `user_id` (`user_id`),
   KEY `chat_id` (`chat_id`),
-  CONSTRAINT `logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `logs_ibfk_2` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -131,4 +130,4 @@ CREATE TABLE `words` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-23 11:15:31
+-- Dump completed on 2025-06-25 17:23:04

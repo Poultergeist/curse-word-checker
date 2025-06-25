@@ -3,6 +3,7 @@ from config.settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 import random
 import json
 from utils.logger import log_system_event
+from languages.language_core import get_locales_list
 
 def execute_db_query(query: str, params=None, fetch: bool = False) -> list | None:
     """
@@ -130,20 +131,17 @@ def check_if_moderator(chat_id: int, user_id: int) -> bool | int:
     Returns:
         bool/int: True if user is a moderator in the chat, 0 if user is superadmin, False otherwise
     """
-    result = execute_db_query(
+    result = [item[0] for item in execute_db_query(
         "SELECT chat_id FROM user_is_moderator WHERE user_id = %s",
         user_id,
         fetch=True
-    )
-    # Fix: handle empty result
-    if not result:
-        return False
-    if result[0][0] == chat_id:
-        return True
-    elif result[0][0] == 0:
+    )]
+    
+    if 0 in result:
         return 0
-    else:
-        return False
+    if chat_id in result:
+        return True
+    return False
 
 def new_moderator(user_id: int, username: str, chat_id: int) -> str:
     """
@@ -159,9 +157,9 @@ def new_moderator(user_id: int, username: str, chat_id: int) -> str:
              "super_admin" if user is superadmin
     """
     result = check_if_moderator(chat_id, user_id)
-    if result:
+    if result is True:
         return "already_moderator"
-    if result == 0:
+    if result is 0:
         return "super_admin"
     
     execute_db_query(
@@ -188,10 +186,11 @@ def delete_moderator(user_id: int, chat_id: int) -> str:
     """
     result = check_if_moderator(chat_id, user_id)
     
-    if result:
-        if result == 0:
-            return "super_admin"
+    if result is False:
         return "not_moderator"
+
+    if result is 0:
+        return "super_admin"
     
     execute_db_query(
         "DELETE FROM user_is_moderator WHERE user_id = %s AND chat_id = %s",
@@ -271,6 +270,7 @@ def add_message(message_data: dict) -> None:
             - username (str): Username of the user who sent the message
             - banned_words (list): List of banned words found in the message (optional)
     """
+    
     execute_db_query(
         """
         INSERT INTO logs (chat_id, user_id, message_id, message_text, timestamp, username, banned_words)
@@ -459,6 +459,60 @@ def delete_chat_and_moderators(chat_id: int) -> None:
         "DELETE FROM logs WHERE chat_id = %s",
         chat_id
     )
+    
+def get_locale(chat_id: int) -> str:
+    """
+    Get the locale for a chat
+    
+    Args:
+        chat_id (int): ID of the chat
+        
+    Returns:
+        str: Locale string for the chat, or 'en' if not set
+    """
+    result = execute_db_query(
+        "SELECT locale FROM chats WHERE id = %s",
+        chat_id,
+        fetch=True
+    )
+    return result[0][0] if result else 'en'
+
+def set_locale(chat_id: int, locale: str) -> bool:
+    """
+    Set the locale for a chat
+    
+    Args:
+        chat_id (int): ID of the chat
+        locale (str): Locale string to set for the chat
+    """
+    
+    if locale not in get_locales_list():
+        log_system_event(
+            'locale_error',
+            {'chat_id': chat_id, 'locale': locale, 'error': 'Locale not found'},
+            'ERROR'
+        )
+        return False
+    
+    execute_db_query(
+        "UPDATE chats SET locale = %s WHERE id = %s",
+        (locale, chat_id)
+    )
+    
+    return True
+
+def list_locales() -> list:
+    """
+    List all available locales in the database.
+    
+    Returns:
+        list: List of locale strings available in the database.
+    """
+    result = execute_db_query(
+        "SELECT DISTINCT locale FROM chats",
+        fetch=True
+    )
+    return [row[0] for row in result] if result else []
 
 def get_statistics(chat_id: int, date) -> dict:
     """

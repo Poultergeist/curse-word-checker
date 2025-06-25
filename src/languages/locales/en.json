@@ -8,12 +8,12 @@
     "list_header": "Banned Words:\n",
     "cleared": "All banned words have been cleared.",
     "too_short": "Please provide a word to {action}.",
-    "ban_banned": "Words '{', '.join(words)}' are already banned.",
-    "banned_success": "Words '{', '.join([w for w in words if w.lower() not in banned])}' have been added to the banned list.",
-    "already_banned": " Already banned: {', '.join(banned)}",
-    "unban_not_banned": "Words '{', '.join(words)}' are not banned.",
-    "unbanned_success": "Words '{', '.join([w for w in words if w.lower() not in not_banned])}' have been removed from the banned list.",
-    "already_unbanned": " Already was unbanned: {', '.join(not_banned)}"
+    "ban_banned": "Words '{words}' are already banned.",
+    "banned_success": "Words '{words}' have been added to the banned list.",
+    "already_banned": "Already banned: {words}",
+    "unban_not_banned": "Words '{words}' are not banned.",
+    "unbanned_success": "Words '{words}' have been removed from the banned list.",
+    "already_unbanned": "Already was unbanned: {words}"
   },
   "mod": {
     "no_args": "Please specify action: add, delete, or list.",
@@ -22,9 +22,9 @@
     "list_header": "Moderators:\n",
     "add_superadmin": "This user is a superadmin and cannot be added as a moderator.",
     "add_already": "This user is already a moderator.",
-    "add_success": "User {username or user_id} is now a moderator.",
+    "add_success": "User {user} is now a moderator.",
     "delete_superadmin": "This user is a superadmin and cannot be removed as a moderator.",
-    "delete_success": "User {username or user_id} has been removed from moderators.",
+    "delete_success": "User {user} has been removed from moderators.",
     "reply": "Please reply to the user you want to add/delete as a moderator"
   },
   "template": {
@@ -32,7 +32,7 @@
     "invalid_action": "Invalid action. Use: add, delete, or list.",
     "list_empty": "There are no message templates in this chat",
     "list_header": "Message templates:\n",
-    "list_item": "- ID: {t[0]},\n\tTemplate: {t[1]}",
+    "list_item": "- ID: {template_id},\n\tTemplate: {template}",
     "add_no_text": "Please provide a template text to add.",
     "add_success": "Template has been added",
     "remove_no_id": "Please provide a template ID to remove.",
@@ -41,7 +41,7 @@
   },
   "messages": {
     "recent": "Recent messages:\n",
-    "recent_item": "- @{m[1]}: {m[2]}",
+    "recent_item": "- @{user}: {message}",
     "recent_empty": "Message not found."
   },
   "delete": {
@@ -49,14 +49,25 @@
     "invalid_action": "Invalid action. Use: on or off.",
     "switch": "Message deletion has been turned {value}"
   },
+  "locale": {
+    "no_args": "Please specify action: list, current, or set.",
+    "invalid_action": "Invalid action. Use: list, current, or set.",
+    "list_empty": "No available locales found.",
+    "list": "Available locales:\n",
+    "current_empty": "No locale is set for this chat.",
+    "current": "Current locale for this chat: {locale}",
+    "set_no_locale": "Please provide a locale code to set.",
+    "set_invalid_locale": "Invalid locale: {locale}. Please provide a valid locale code.",
+    "set": "Locale has been set to {locale} for this chat."
+  },
   "statistics": {
     "format": "Please provide date in format dd-mm-yy",
-    "header": "📊 Statistics for {date.strftime('%d-%m-%Y')}:\n\n",
+    "header": "📊 Statistics for {date}:\n\n",
     "users_header": "👤 Top users (by banned words used):\n",
-    "users_item": "{i}. @{username or 'unknown'} — {count}\n",
+    "users_item": "{id}. @{user} — {count}\n",
     "words_header": "🚫 Top banned words used:\n",
-    "words_item": "{i}. {word} — {count}\n",
-    "most_banned": "📝 Most banned message:\n{stats['most_banned_message'][0]}\n",
+    "words_item": "{id}. {word} — {count}\n",
+    "most_banned": "📝 Most banned message:\n{message}\n",
     "empty": "⛔️ No statistics available for this date. ⛔️"
   },
   "bot_add": {
@@ -65,8 +76,63 @@
   },
   "help": {
     "help_short": {
-      "header": "Available commands:\n\n",
-      "word_header": "Word management:\n"
+      "header": "Available commands:",
+      "word_header": "Word management:",
+      "word_ban": "Ban a word",
+      "word_unban": "Remove banned word",
+      "word_list": "Show banned words",
+      "word_clear": "Clear all banned words",
+      "mod_header": "Moderator management:",
+      "mod_add": "Add a moderator",
+      "mod_delete": "Remove a moderator",
+      "mod_list": "Show moderators",
+      "template_header": "Message templates:",
+      "template_add": "Add a message template",
+      "template_delete": "Remove a message template",
+      "template_list": "Show message templates",
+      "locale_header": "Locale management:",
+      "locale_list": "Show available locales",
+      "locale_current": "Show current locale",
+      "locale_set": "Set locale for the chat",
+      "other_header": "Other commands:",
+      "other_messages": "Show recent messages",
+      "other_delete": "Toggle message deletion",
+      "other_statistics": "Show statistics for today or a given date",
+      "other_help": "Use /help <command> for detailed help about specific command\nExample: /help word ban"
+    },
+    "help_texts": {
+      "word": {
+        "none": "Word management commands\nUsage: {help_template}",
+        "ban": "Ban a word in the chat\nUsage: {help_template}\nExamples: {help_ex}",
+        "unban": "Remove a word from ban list\nUsage: {help_template}\nExamples: {help_ex}",
+        "list": "Show all banned words in the chat\nUsage: {help_template}",
+        "clear": "Remove all banned words from the chat\nUsage: {help_template}"
+      },
+      "mod": {
+        "none": "Moderator management commands\nUsage: {help_template}",
+        "add": "Add a new moderator\nUsage: {help_template}\nExamples: {help_ex}",
+        "delete": "Remove a moderator\nUsage: {help_template}\nExamples: {help_ex}",
+        "list": "Show all moderators in the chat\nUsage: {help_template}"
+      },
+      "template": {
+        "none": "Template management commands\nUsage: {help_template}",
+        "add": "Add a new message template\nUsage: {help_template}\nExamples: {help_ex}\nYou can use {{name}} for user name, {{word}} for banned word.",
+        "delete": "Remove a message template\nUsage: {help_template}\nExamples: {help_ex}",
+        "list": "Show all message templates\nUsage: {help_template}"
+      },
+      "locale": {
+        "none": "Locale management commands\nUsage: {help_template}",
+        "list": "Show available locales\nUsage: {help_template}",
+        "current": "Show current locale for the chat\nUsage: {help_template}",
+        "set": "Set locale for the chat\nUsage: {help_template}\nExamples: {help_ex}"
+      },
+      "help": {
+        "none": "Show help message\nUsage: {help_template}\nExamples: {help_ex}",
+        "help": "Really?"
+      },
+      "messages": "Show recent messages\nUsage: {help_template}\nExamples: {help_ex}",
+      "delete": "Toggle automatic message deletion\nUsage: {help_template}\nExamples: {help_ex}",
+      "statistics": "Show statistics for today or a given date\nUsage: {help_template}\nExamples: {help_ex}"
     }
   }
 }

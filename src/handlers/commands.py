@@ -6,6 +6,9 @@ from config.settings import DEFAULT_TEMPLATE
 import re
 from datetime import datetime
 from utils import args as global_args
+from languages.language_core import get_locales, reinitialize_locales, list_locales, get_locales_list
+
+locales = get_locales()
 
 async def check_message(update: Update, context: CallbackContext) -> None:
     """
@@ -99,13 +102,16 @@ async def word_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
     if not context.args:
-        await update.message.reply_text("Please specify action: ban, unban, list, or clear")
+        await update.message.reply_text(locales[current_locale]['word']['no_args'])
         return
 
     action = context.args[0].lower()
     if action not in ['ban', 'unban', 'list', 'clear']:
-        await update.message.reply_text("Invalid action. Use: ban, unban, list, or clear")
+        await update.message.reply_text(locales[current_locale]['word']['invalid_action'])
         return
     
     chat_id = update.effective_chat.id
@@ -115,14 +121,14 @@ async def word_command(update: Update, context: CallbackContext) -> None:
         words = db.get_banned_words(chat_id)
         
         if not words:
-            await update.message.reply_text("No banned words in this chat")
+            await update.message.reply_text(locales[current_locale]['word']['list_empty'])
             return
         
-        await update.message.reply_text("Banned words:\n" + "\n".join(f"- {word}" for word in words))
+        await update.message.reply_text(f"{locales[current_locale]['word']['list_header']}" + "\n".join(f"- {word}" for word in words))
         return
 
-    if not db.check_if_moderator(chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
+    if db.check_if_moderator(chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
         
         log_system_event(
             'access_denied',
@@ -139,18 +145,18 @@ async def word_command(update: Update, context: CallbackContext) -> None:
 
     if action == 'clear':
         db.clear_words_by_chat(chat_id)
-        await update.message.reply_text("All banned words have been cleared")
+        await update.message.reply_text(locales[current_locale]['word']['cleared'])
         return
 
     if len(context.args) < 2:
-        await update.message.reply_text(f"Please provide a word to {action}")
+        await update.message.reply_text(locales[db.get_locale(chat_id)]['word']['too_short'].format(action=action))
         return
 
     words = context.args[1:]
     chat_name = update.effective_chat.title or str(chat_id)
     
     if len(words) == 0:
-        await update.message.reply_text(f"Please provide a word to {action}")
+        await update.message.reply_text(locales[current_locale]['word']['too_short'].format(action=action))
         log_system_event(
             'command_error',
             {
@@ -184,7 +190,7 @@ async def word_command(update: Update, context: CallbackContext) -> None:
             if banned == words:
                 # If all words are already banned, reply with a message
                 await update.message.reply_text(
-                    f"Words '{', '.join(words)}' are already banned."
+                    locales[current_locale]['word']['ban_banned'].format(words=', '.join(words))
                 )
                 return
             for word in not_banned:
@@ -192,8 +198,8 @@ async def word_command(update: Update, context: CallbackContext) -> None:
                 
             # Reply with confirmation message
             await update.message.reply_text(
-                f"Words '{', '.join([w for w in words if w.lower() not in banned])}' have been added to the banned list."
-                + (banned and f" Already banned: {', '.join(banned)}" if banned else "")
+                locales[current_locale]['word']['banned_success'].format(words=', '.join([w for w in words if w.lower() not in banned]))
+                + (banned and " " + locales[current_locale]['word']['banned_success'].format(words=', '.join(banned)) if banned else "")
             )
             
         except Exception as e:
@@ -207,7 +213,7 @@ async def word_command(update: Update, context: CallbackContext) -> None:
                 },
                 'ERROR'
             )
-            await update.message.reply_text("An error occurred while executing the command.") 
+            await update.message.reply_text(locales[current_locale]['error']) 
     
     if action == 'unban':
         try:
@@ -225,15 +231,15 @@ async def word_command(update: Update, context: CallbackContext) -> None:
             if not_banned == words:
                 # If all words are not banned, reply with a message
                 await update.message.reply_text(
-                    f"Words '{', '.join(words)}' are not banned."
+                    locales[current_locale]['word']['unban_not_banned'].format(words=', '.join(words))
                 )
                 return
             for word in banned:
                 db.remove_banned_word(word, update.message.chat_id)
             # Reply with confirmation message
             await update.message.reply_text(
-                f"Words '{', '.join([w for w in words if w.lower() not in not_banned])}' have been removed from the banned list."
-                + (not_banned and f" Already was unbanned: {', '.join(not_banned)}" if not_banned else "")
+                locales[current_locale]['word']['unbanned_success'].format(words=', '.join([w for w in words if w.lower() not in not_banned]))
+                + (not_banned and ' ' + locales[current_locale]['word']['already_unbanned'].format(words=', '.join(not_banned)) if not_banned else "")
             )
         except Exception as e:
             log_system_event(
@@ -246,7 +252,7 @@ async def word_command(update: Update, context: CallbackContext) -> None:
                 },
                 'ERROR'
             )
-            await update.message.reply_text("An error occurred while executing the command.")
+            await update.message.reply_text(locales[current_locale]['error'])
 
 async def mod_command(update: Update, context: CallbackContext) -> None:
     """
@@ -256,17 +262,20 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
     if not context.args:
-        await update.message.reply_text("Please specify action: add, delete, or list")
+        await update.message.reply_text(locales[current_locale]['mod']['no_args'])
         return
 
     action = context.args[0].lower()
     if action not in ['add', 'delete', 'list']:
-        await update.message.reply_text("Invalid action. Use: add, delete, or list")
+        await update.message.reply_text(locales[current_locale]['mod']['invalid_action'])
         return
         
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
+    if db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
         log_system_event(
             'access_denied',
             {
@@ -282,10 +291,10 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
     if action == 'list':
         moderators = db.list_moderators(update.message.chat_id)
         if not moderators:
-            await update.message.reply_text("No moderators in this chat")
+            await update.message.reply_text(locales[current_locale]['mod']['list_empty'])
             return
         
-        await update.message.reply_text("Moderators:\n" + "\n".join(f"- {m[1] or f'User {m[0]}'}" for m in moderators))
+        await update.message.reply_text(locales[current_locale]['mod']['list_header'] + "\n".join(f"- {m[1] or f'User {m[0]}'}" for m in moderators))
         return
 
     # Handle add/delete with reply to message
@@ -297,22 +306,22 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         if action == 'add':
             status = db.new_moderator(user_id, username, update.message.chat_id)
             if status == "super_admin":
-                await update.message.reply_text("This user is a super admin")
+                await update.message.reply_text(locales[current_locale]['mod']['add_superadmin'])
             elif status == "already_moderator":
-                await update.message.reply_text("This user is already a moderator")
+                await update.message.reply_text(locales[current_locale]['mod']['add_already'])
             else:
-                await update.message.reply_text(f"User {username or user_id} is now a moderator")
+                await update.message.reply_text(locales[current_locale]['mod']['add_success'].format(user=username or user_id))
         else:  # delete
             status = db.delete_moderator(user_id, update.message.chat_id)
             if status == "super_admin":
-                await update.message.reply_text("Cannot remove super admin")
+                await update.message.reply_text(locales[current_locale]['mod']['delete_superadmin'])
             else:
-                await update.message.reply_text(f"User {username or user_id} is no longer a moderator")
+                await update.message.reply_text(locales[current_locale]['mod']['delete_success'].format(user=username or user_id))
+        return
+    else:
+        await update.message.reply_text(locales[current_locale]['mod']['reply'])
         return
     
-    if action in ['add', 'delete'] and not update.message.reply_to_message:
-        await update.message.reply_text("Please reply to the user you want to add/delete as a moderator")
-        return
 
 async def template_command(update: Update, context: CallbackContext) -> None:
     """
@@ -322,17 +331,20 @@ async def template_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
     if not context.args:
-        await update.message.reply_text("Please specify action: add, delete, or list")
+        await update.message.reply_text(locales[current_locale]['template']['no_args'])
         return
 
     action = context.args[0].lower()
-    if action not in ['add', 'delete', 'list']:
-        await update.message.reply_text("Invalid action. Use: add, delete, or list")
+    if action not in ['add', 'delete', 'list', 'remove']:
+        await update.message.reply_text(locales[current_locale]['template']['invalid_action'])
         return
 
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
+    if db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
         return
 
     if action == 'list':
@@ -348,10 +360,10 @@ async def template_command(update: Update, context: CallbackContext) -> None:
             )
             templates = db.list_message_templates(update.message.chat_id)
             if not templates:
-                await update.message.reply_text("There are no message templates in this chat")
+                await update.message.reply_text(locales[current_locale]['template']['list_empty'])
                 return
-            message = "Message templates:\n" + "\n".join(
-                f"- ID: {t[0]},\n\tTemplate: {t[1]}" for t in templates
+            message = locales[current_locale]['template']['list_header'] + "\n".join(
+                locales[current_locale]['template']['list_item'].format(template_id=t[0], template=t[1]) for t in templates
             )
             await update.message.reply_text(message)
             return
@@ -366,7 +378,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
                 },
                 'ERROR'
             )
-            await update.message.reply_text("An error occurred while executing the command.")
+            await update.message.reply_text(locales[current_locale]['error'])
             return
 
     if action == 'add':
@@ -381,7 +393,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
                 }
             )
             if len(context.args) < 2:
-                await update.message.reply_text("Please provide template text")
+                await update.message.reply_text(locales[current_locale]['template']['add_no_text'])
                 return
             # Ensure template is a single string
             template = " ".join(context.args[1:]).strip()
@@ -390,7 +402,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
             # Update template IDs to be sequential
             db.reorder_template_ids(update.message.chat_id)
             
-            await update.message.reply_text("Template has been added")
+            await update.message.reply_text(locales[current_locale]['template']['add_success'])
             return
         except Exception as e:
             log_system_event(
@@ -401,12 +413,12 @@ async def template_command(update: Update, context: CallbackContext) -> None:
                     'user_id': update.effective_user.id,
                 }
             )
-            await update.message.reply_text("An error occurred while adding the template.")
+            await update.message.reply_text(locales[current_locale]['error'])
             return
         
     if action == 'delete' or action == 'remove':  # delete
         if len(context.args) < 2:
-            await update.message.reply_text("Please provide template ID")
+            await update.message.reply_text(locales[current_locale]['template']['remove_no_id'])
             return
         try:
             # Log command execution
@@ -425,7 +437,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
             # Update template IDs to be sequential
             db.reorder_template_ids(update.message.chat_id)
             
-            await update.message.reply_text("Template has been removed")
+            await update.message.reply_text(locales[current_locale]['template']['remove_success'])
         except ValueError:
             log_system_event(
                 'command_error',
@@ -435,19 +447,19 @@ async def template_command(update: Update, context: CallbackContext) -> None:
                     'user_id': update.effective_user.id,
                 }
             )
-            await update.message.reply_text("Please provide a valid template ID")
+            await update.message.reply_text(locales[current_locale]['template']['remove_value_error'])
         except Exception as e:
             log_system_event(
                 'command_error',
                 {
-                    'command': 'delete',
+                    'command': 'template_delete',
                     'error': str(e),
                     'user_id': update.effective_user.id,
                 }
             )
-            await update.message.reply_text("An error occurred while deleting the template.")
+            await update.message.reply_text(locales[current_locale]['error'])
         return
-    await update.message.reply_text("Invalid action. Use: add, delete, or list")
+    await update.message.reply_text(locales[current_locale]['template']['invalid_action'])
     return
 
 async def messages_command(update: Update, context: CallbackContext) -> None:
@@ -458,19 +470,22 @@ async def messages_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
+    if db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
         return
         
     timestamp = context.args[0] if context.args else None
     messages = db.show_messages_by_chat(update.message.chat_id, timestamp)
     
     if not messages:
-        await update.message.reply_text("No messages found")
+        await update.message.reply_text(locales[current_locale]['messages']['recent_empty'])
         return
         
-    message = "Recent messages:\n" + "\n".join(
-        f"- @{m[1]}: {m[2]}" for m in messages[-10:]  # Show last 10 messages
+    message = locales[current_locale]['messages']['recent'] + "\n".join(
+        locales[current_locale]['messages']['recent_item'].format(user=m[1], message=m[2]) for m in messages[-10:]  # Show last 10 messages
     )
     await update.message.reply_text(message)
 
@@ -482,25 +497,157 @@ async def delete_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
-    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id):
-        await update.message.reply_text("You are not a moderator")
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
+    if db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
         return
         
     # Show current status
     if not context.args:
         current = db.delete_messages_check(update.message.chat_id)
-        await update.message.reply_text(f"Message deletion is {'enabled' if current else 'disabled'}")
+        await update.message.reply_text(locales[current_locale]['delete']['show'].format(status='enabled' if current else 'disabled'))
         return
         
     # Check if argument is 'on' or 'off'
     value = context.args[0].lower()
     if value not in ['on', 'off']:
-        await update.message.reply_text("Please use 'on' or 'off'")
+        await update.message.reply_text(locales[current_locale]['delete']['invalid_action'])
         return
         
     # Update deletion setting in database
     db.delete_messages_change(update.message.chat_id, value == 'on')
-    await update.message.reply_text(f"Message deletion has been turned {value}")
+    await update.message.reply_text(locales[current_locale]['delete']['switch'].format(value=value))
+
+async def locale_command(update: Update, context: CallbackContext) -> None:
+    """
+    Handle locale-related commands
+
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
+    if not context.args:
+        await update.message.reply_text(locales[current_locale]['locale']['no_args'])
+        return
+
+    action = context.args[0].lower()
+    if action not in ['list', 'current', 'set']:
+        await update.message.reply_text(locales[current_locale]['locale']['invalid_action'])
+        return
+    
+    if db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is False:
+        await update.message.reply_text(locales[current_locale]['no_access'])
+        log_system_event(
+            'access_denied',
+            {
+                'command': 'locale',
+                'action': action,
+                'user_id': update.effective_user.id,
+                'username': update.effective_user.username,
+            },
+            "WARNING"
+        )
+        return
+    
+    if action == 'list':
+        _locales = get_locales_list()
+        if not _locales:
+            await update.message.reply_text(locales[current_locale]['locale']['list_empty'])
+            return
+        await update.message.reply_text(locales[current_locale]['locale']['list'] + "\n".join(_locales))
+        return
+
+    if action == 'current':
+        locale = db.get_locale(update.message.chat_id)
+        if not locale:
+            await update.message.reply_text(locales[current_locale]['locale']['current_empty'])
+            return
+        await update.message.reply_text(locales[current_locale]['locale']['current'].format(locale=locale))
+        return
+
+    if action == 'set':
+        if len(context.args) < 2:
+            await update.message.reply_text(locales[current_locale]['locale']['set_no_locale'])
+            return
+        locale = " ".join(context.args[1:]).lower()
+        if db.set_locale(update.message.chat_id, locale):
+            await update.message.reply_text(locales[current_locale]['locale']['set'].format(locale=locale))
+        else:
+            await update.message.reply_text(locales[current_locale]['locale']['set_invalid_locale'].format(locale=locale))
+            log_system_event(
+                'locale_set_error',
+                {
+                    'chat_id': update.message.chat_id,
+                    'locale': locale,
+                    'user_id': update.effective_user.id
+                },
+                'ERROR'
+            )
+        
+async def reinitialize_locales_command(update: Update, context: CallbackContext) -> None:
+    """
+    Reinitialize locales from files
+
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+
+    global locales
+    current_locale = db.get_locale(update.effective_chat.id)
+
+    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is 0:
+        await update.message.reply_text(locales[current_locale]['no_access'])
+
+        log_system_event(
+            'access_denied',
+            {
+                'command': 'reinitialize_locales',
+                'user_id': update.effective_user.id,
+                'username': update.effective_user.username,
+            },
+            "WARNING"
+        )
+
+        return
+
+    try:
+        locales = reinitialize_locales()
+        await update.message.reply_text("Locales have been reinitialized successfully")
+    except Exception as e:
+        log_system_event(
+            'locales_reinitialization_error',
+            {'error': str(e)},
+            'ERROR'
+        )
+        await update.message.reply_text(locales[current_locale]['error'])
+        
+async def all_locales_command(update: Update, context: CallbackContext) -> None:
+    """
+    Show all available locales
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
+    if not db.check_if_moderator(update.message.chat_id, update.message.from_user.id) is 0:
+        await update.message.reply_text(locales[current_locale]['no_access'])
+        return
+    
+    locales = list_locales()
+    if not locales:
+        await update.message.reply_text("No available locales found")
+        return
+    
+    await update.message.reply_text("Available locales:\n" + "\n".join(locales))
 
 async def statistics_command(update: Update, context: CallbackContext) -> None:
     """
@@ -511,6 +658,8 @@ async def statistics_command(update: Update, context: CallbackContext) -> None:
         context (CallbackContext): Context for the callback
     """
     
+    current_locale = db.get_locale(update.effective_chat.id)
+    
     # Empty flag to check if statistics are available
     empty = True
 
@@ -519,34 +668,44 @@ async def statistics_command(update: Update, context: CallbackContext) -> None:
         try:
             date = datetime.strptime(context.args[0], "%d-%m-%y").date()
         except Exception:
-            await update.message.reply_text("Please provide date in format dd-mm-yy")
+            await update.message.reply_text(locales[current_locale]['statistics']['format'])
             return
     else:
         date = datetime.now().date()
 
     stats = db.get_statistics(update.message.chat_id, date)
-    msg = f"📊 Statistics for {date.strftime('%d-%m-%Y')}:\n\n"
+    msg = locales[current_locale]['statistics']['header'].format(date=date.strftime("%d-%m-%Y"))
     
     if stats['user_stats']:
         empty = False
-        msg += "👤 Top users (by banned words used):\n"
+        msg += locales[current_locale]['statistics']['users_header']
         for i, (username, count) in enumerate(stats['user_stats'], 1):
-            msg += f"{i}. @{username or 'unknown'} — {count}\n"
+            msg += locales[current_locale]['statistics']['users_item'].format(
+                id=i,
+                user=username or f"User {count[0]}",
+                count=count
+            )
     msg += "\n"
     
     if stats['word_stats']:
         empty = False
-        msg += "🚫 Top banned words used:\n"
+        msg += locales[current_locale]['statistics']['words_header']
         for i, (word, count) in enumerate(stats['word_stats'], 1):
-            msg += f"{i}. {word} — {count}\n"
+            msg += locales[current_locale]['statistics']['words_item'].format(
+                id=i,
+                word=word,
+                count=count
+            )
     msg += "\n"
     
     if stats['most_banned_message']:
         empty = False
-        msg += f"📝 Most banned message:\n{stats['most_banned_message'][0]}\n"
+        msg += locales[current_locale]['statistics']['most_banned'].format(
+            message=stats['most_banned_message'][0]
+        )
     
     if empty:
-        msg = "⛔️ No statistics available for this date. ⛔️"
+        msg = locales[current_locale]['statistics']['empty']
     
     await update.message.reply_text(msg)
 
@@ -558,8 +717,11 @@ async def on_bot_added(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    
     if not update.message or not update.message.new_chat_members:
-        await update.message.reply_text("No new chat members")
+        await update.message.reply_text(locales[current_locale]['bot_add']['no_new'])
         return
 
     bot = context.bot
@@ -580,7 +742,7 @@ async def on_bot_added(update: Update, context: CallbackContext) -> None:
                 scope=BotCommandScopeChat(chat_id=update.message.chat_id)
             )
             await update.message.reply_text(
-                "Hello! I'm a curse word bot. Use /help to see available commands."
+                locales[current_locale]['bot_add']['added']
             )
             
             # Ensure chat exists in the database
@@ -625,40 +787,50 @@ async def help_command(update: Update, context: CallbackContext) -> None:
         update (Update): Incoming update from Telegram
         context (CallbackContext): Context for the callback
     """
+    
+    current_locale = db.get_locale(update.effective_chat.id)
+    help_short = locales[current_locale]['help']['help_short']
+    locale_help = locales[current_locale]['help']['help_texts']
+    
     if not context.args:
         # Show general help
         help_text = (
-            "Available commands:\n\n"
-            "Word management:\n"
-            "/word ban <word> - Ban a word\n"
-            "/word unban <word> - Remove banned word\n"
-            "/word list - Show banned words\n\n"
-            "Moderator management:\n"
-            "**reply to user** /mod add - Add moderator\n"
-            "**reply to user** /mod delete - Remove moderator\n"
-            "/mod list - Show moderators\n\n"
-            "Template management:\n"
-            "/template add <text> - Add message template\n"
-            "/template delete <id> - Remove template\n"
-            "/template list - Show templates\n\n"
-            "Other commands:\n"
-            "/messages (optional)[timestamp] - Show recent messages\n"
-            "/delete [on|off] - Toggle message deletion\n\n"
-            "Use /help <command> for detailed help about specific command\n"
-            "Example: /help word ban"
+            f"{help_short['header']}\n\n"
+            f"{help_short['word_header']}\n"
+            f"/word ban <word> - {help_short['word_ban']}\n"
+            f"/word unban <word> - {help_short['word_unban']}\n"
+            f"/word list - {help_short['word_list']}\n"
+            f"/word clear - {help_short['word_clear']}\n\n"
+            f"{help_short['mod_header']}\n"
+            f"**reply to user** /mod add - {help_short['mod_add']}\n"
+            f"**reply to user** /mod delete - {help_short['mod_delete']}\n"
+            f"/mod list - {help_short['mod_list']}\n\n"
+            f"{help_short['template_header']}\n"
+            f"/template add <text> - {help_short['template_add']}\n"
+            f"/template delete <id> - {help_short['template_delete']}\n"
+            f"/template list - {help_short['template_list']}\n\n"
+            f"{help_short['locale_header']}\n"
+            f"/locale list - {help_short['locale_list']}\n"
+            f"/locale current - {help_short['locale_current']}\n"
+            f"/locale set <locale> - {help_short['locale_set']}\n\n"
+            f"{help_short['other_header']}\n"
+            f"/messages (optional)[timestamp] - {help_short['other_messages']}\n"
+            f"/delete [on|off] - {help_short['other_delete']}\n"
+            f"/statistics (optional)[dd-mm-yy] - {help_short['other_statistics']}\n\n"
+            f"{help_short['other_help']}"
         )
         await update.message.reply_text(help_text)
     else:
         # Show help for specific command
         command = context.args[0].lower()
         subcommand = context.args[1].lower() if len(context.args) > 1 else None
-        help_text = get_command_help(command, subcommand)
+        help_text = get_command_help(command, locale_help, subcommand)
         if help_text:
             await update.message.reply_text(help_text)
         else:
-            await update.message.reply_text(f"No help available for command {command}")
+            await update.message.reply_text(help_short['error'].format(command=command))
 
-def get_command_help(command: str, subcommand: str = None) -> str:
+def get_command_help(command: str, locale_help: list, subcommand: str = None) -> str:
     """
     Get help text for specific command
     
@@ -671,31 +843,90 @@ def get_command_help(command: str, subcommand: str = None) -> str:
     """
     help_texts = {
         "word": {
-            None: "Word management commands\nUsage:\n/word ban <words> - Ban a word\n/word unban <words> - Remove banned word\n/word list - Show banned words\n/word clear - Clear all banned words",
-            "ban": "Ban a word in the chat\nUsage: /word ban <words>\nExamples:\n - /word ban badword\n - /word ban badword1 badword2",
-            "unban": "Remove a word from ban list\nUsage: /word unban <words>\nExamples:\n - /word unban badword\n - /word unban badword1 badword2",
-            "list": "Show all banned words in the chat\nUsage: /word list",
-            "clear": "Remove all banned words from the chat\nUsage: /word clear"
+            None: locale_help['word']['none'].format(
+                help_template='\n/word ban <words> - Ban a word\n/word unban <words> - Remove banned word\n/word list - Show banned words\n/word clear - Clear all banned words'
+            ),
+            "ban": locale_help['word']['ban'].format(
+                help_template='/word ban <words> - Ban a word',
+                help_ex='- /word ban badword\n- /word ban badword1 badword2'
+            ),
+            "unban": locale_help['word']['unban'].format(
+                help_template='/word unban <words> - Remove banned word',
+                help_ex='- /word unban badword\n- /word unban badword1 badword2'
+            ),
+            "list": locale_help['word']['list'].format(
+                help_template='/word list - Show banned words'
+            ),
+            "clear": locale_help['word']['clear'].format(
+                help_template='/word clear - Clear all banned words'
+            )
         },
         "mod": {
-            None: "Moderator management commands\nUsage:\n**reply to user** /mod add - Add moderator\n**reply to user** /mod delete - Remove moderator\n/mod list - Show moderators",
-            "add": "Add a new moderator\nUsage: **reply to user** /mod add\nExample: **reply to user** /mod add",
-            "delete": "Remove a moderator\nUsage: **reply to user** /mod delete\nExample: **reply to user** /mod delete",
-            "list": "Show all moderators in the chat\nUsage: /mod list"
+            None: locale_help['mod']['none'].format(
+                help_template='\n**reply to user** /mod add - Add moderator\n**reply to user** /mod delete - Remove moderator\n/mod list - Show moderators'
+            ),
+            "add": locale_help['mod']['add'].format(
+                help_template='**reply to user** /mod add - Add moderator',
+                help_ex='**reply to user** /mod add'
+            ),
+            "delete": locale_help['mod']['delete'].format(
+                help_template='**reply to user** /mod delete - Remove moderator',
+                help_ex='**reply to user** /mod delete'
+            ),
+            "list": locale_help['mod']['list'].format(
+                help_template='/mod list - Show moderators'
+            )
         },
         "template": {
-            None: "Template management commands\nUsage:\n/template add <text> - Add template\n/template delete <id> - Remove template\n/template list - Show templates",
-            "add": "Add a new message template\nUsage: /template add <text>\nOptional placeholders: {name} for user name, {word} for banned word\nExamples:\n - /template add Hey {name}!\n - /template add Don't use {word}!\n - /template add Hey {name}, don't use {word}!\n - /template add This word is not allowed!",
-            "delete": "Remove a message template\nUsage: /template delete <id>\nExample: /template delete 1",
-            "list": "Show all message templates\nUsage: /template list"
+            None: locale_help['template']['none'].format(
+                help_template='\n/template add <text> - Add template\n/template delete <id> - Remove template\n/template list - Show templates'
+            ),
+            "add": locale_help['template']['add'].format(
+                help_template='/template add <text> - Add template',
+                help_ex='- /template add Hey {name}!\n- /template add Don\'t use {word}!\n- /template add Hey {name}, don\'t use {word}!\n- /template add This word is not allowed!'
+            ),
+            "delete": locale_help['template']['delete'].format(
+                help_template='/template delete <id> - Remove template',
+                help_ex='/template delete 1'
+            ),
+            "list": locale_help['template']['list'].format(
+                help_template='/template list - Show templates'
+            )
         },
-        "messages": "Show recent messages\nUsage: /messages (optional)[timestamp]\nExample: /messages 2024-03-20",
-        "delete": "Toggle automatic message deletion\nUsage: /delete [on|off]\nExample: /delete on",
-        "statistics": "Show statistics for today or a given date\nUsage: /statistics (optional)[dd-mm-yy]\nExample: /statistics 20-03-24",
+        "locale": {
+            None: locale_help['locale']['none'].format(
+                help_template='\n/locale list - Show available locales\n/locale current - Show current locale\n/locale set <locale> - Set locale for the chat'
+            ),
+            "list": locale_help['locale']['list'].format(
+                help_template='/locale list - Show available locales'
+            ),
+            "current": locale_help['locale']['current'].format(
+                help_template='/locale current - Show current locale'
+            ),
+            "set": locale_help['locale']['set'].format(
+                help_template='/locale set <locale> - Set locale for the chat',
+                help_ex='/locale set en'
+            )
+        },
         "help": {
-            None: "Show help message\nUsage: /help [command]\nExample: /help word ban",
-            "help": "Realy?"
-            }
+            None: locale_help['help']['none'].format(
+                help_template='/help [command] - Show help for command',
+                help_ex='/help word ban'
+            ),
+            "help": locale_help['help']['help']
+        },
+        "messages": locale_help['messages'].format(
+            help_template='/messages (optional)[timestamp] - Show recent messages',
+            help_ex='/messages 2024-03-20'
+        ),
+        "delete": locale_help['delete'].format(
+            help_template='/delete [on|off] - Toggle automatic message deletion',
+            help_ex='/delete on'
+        ),
+        "statistics": locale_help['statistics'].format(
+            help_template='/statistics (optional)[dd-mm-yy] - Show statistics for today or a given date',
+            help_ex='/statistics 20-03-24'
+        )
     }
     
     if command in help_texts:

@@ -16,7 +16,10 @@ from handlers.commands import (
     on_bot_added,
     help_command,
     statistics_command,
-    on_bot_removed
+    on_bot_removed,
+    locale_command,
+    reinitialize_locales_command,
+    all_locales_command
 )
 
 # Load environment variables
@@ -58,7 +61,11 @@ def main() -> None:
     application.add_handler(CommandHandler("messages", messages_command))
     application.add_handler(CommandHandler("delete", delete_command))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("statistics", statistics_command))  # <-- add this
+    application.add_handler(CommandHandler("statistics", statistics_command))
+    application.add_handler(CommandHandler("locale", locale_command))
+    application.add_handler(CommandHandler("reinitialize_locales", reinitialize_locales_command))
+    application.add_handler(CommandHandler("all_locales", all_locales_command))
+    
     
     # Handle new chat members (for bot being added to chat)
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_bot_added))
