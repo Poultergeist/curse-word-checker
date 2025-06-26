@@ -546,7 +546,7 @@ def get_statistics(chat_id: int, date) -> dict:
         (chat_id, date_str),
         fetch=True
     )
-    
+
     # Top banned words
     word_stats = execute_db_query(
         """
@@ -574,6 +574,67 @@ def get_statistics(chat_id: int, date) -> dict:
         LIMIT 1
         """,
         (chat_id, date_str),
+        fetch=True
+    )
+     
+    return {
+        "user_stats": user_stats or [],
+        "word_stats": word_stats or [],
+        "most_banned_message": most_banned_message[0] if most_banned_message else None
+    }
+    
+def get_statistics_full(chat_id: int) -> dict:
+    """
+    Get full statistics for a chat.
+    
+    Args:
+        chat_id (int): ID of the chat
+        
+    Returns:
+        dict: Dictionary containing statistics for the specified date range
+    """
+    # Top users
+    user_stats = execute_db_query(
+        """
+        SELECT l.username, COUNT(*) as cnt
+        FROM logs l
+        WHERE l.chat_id = %s
+          AND l.banned_words IS NOT NULL AND JSON_LENGTH(l.banned_words) > 0
+        GROUP BY l.user_id, l.username
+        ORDER BY cnt DESC
+        LIMIT 10
+        """,
+        (chat_id),
+        fetch=True
+    )
+
+    # Top banned words
+    word_stats = execute_db_query(
+        """
+        SELECT bw.word, COUNT(*) as cnt
+        FROM logs l
+        JOIN JSON_TABLE(l.banned_words, '$[*]' COLUMNS(word VARCHAR(255) PATH '$')) bw
+        WHERE l.chat_id = %s
+          AND l.banned_words IS NOT NULL AND JSON_LENGTH(l.banned_words) > 0
+        GROUP BY bw.word
+        ORDER BY cnt DESC
+        LIMIT 10
+        """,
+        (chat_id),
+        fetch=True
+    )
+    
+    # Message with most banned words
+    most_banned_message = execute_db_query(
+        """
+        SELECT l.message_text, JSON_LENGTH(l.banned_words) as banned_count
+        FROM logs l
+        WHERE l.chat_id = %s
+          AND l.banned_words IS NOT NULL AND JSON_LENGTH(l.banned_words) > 0
+        ORDER BY banned_count DESC
+        LIMIT 1
+        """,
+        (chat_id),
         fetch=True
     )
      

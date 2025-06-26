@@ -1,106 +1,105 @@
 # Telegram Curse Word Bot
 
-Бот для Telegram, який допомагає модераторам чатів контролювати використання заборонених слів.
+A Telegram bot to help chat moderators control the use of banned words, manage moderators, customize warning templates, and support multiple languages.
 
-## Функціональність
+## Features
 
-- Перевірка повідомлень на наявність заборонених слів
-- Автоматичне видалення повідомлень з забороненими словами (опціонально)
-- Налаштовувані шаблони попереджень
-- Система модераторів
-- Логування повідомлень
+- Checks messages for banned words (whole-word match)
+- Optionally deletes messages with banned words
+- Customizable warning templates with placeholders
+- Moderator management (add/remove/list)
+- Logging of messages and statistics
+- Locale/language support (switch bot language per chat)
+- Command help with detailed usage and examples
 
-## Команди
+## Commands
 
-### Управління словами
-- `/word ban <слова>` - забанити одне або кілька слів (наприклад: `/word ban слово1 слово2`)
-- `/word unban <слова>` - розбанити одне або кілька слів (наприклад: `/word unban слово1 слово2`)
-- `/word list` - показати список забанених слів
-- `/word clear` - очистити всі забанені слова
+### Word Management
+- `/word ban <words>` — Ban one or more words (e.g. `/word ban word1 word2`)
+- `/word unban <words>` — Unban one or more words (e.g. `/word unban word1 word2`)
+- `/word list` — Show banned words
+- `/word clear` — Clear all banned words
 
-### Управління модераторами
-- **Відповідь на повідомлення користувача** `/mod add` - додати модератора
-- **Відповідь на повідомлення користувача** `/mod delete` - видалити модератора
-- `/mod list` - показати список модераторів
+### Moderator Management
+- **Reply to a user** `/mod add` — Add moderator
+- **Reply to a user** `/mod delete` — Remove moderator
+- `/mod list` — Show moderators
 
-### Управління шаблонами
-- `/template add <текст>` - додати шаблон повідомлення
-- `/template delete <id>` - видалити шаблон
-- `/template list` - показати список шаблонів
+### Template Management
+- `/template add <text>` — Add a message template (supports `{name}` and `{word}` placeholders)
+- `/template delete <id>` — Remove a template
+- `/template list` — Show templates
 
-### Інші команди
-- `/messages [timestamp]` - показати останні повідомлення
-- `/delete [on|off]` - увімкнути/вимкнути автоматичне видалення повідомлень
-- `/help [команда] [підкоманда]` - показати допомогу
+### Locale Management
+- `/locale list` — Show available locales
+- `/locale current` — Show current locale for the chat
+- `/locale set <locale>` — Set locale for the chat (e.g. `/locale set en`)
 
-## Шаблони повідомлень
+### Other Commands
+- `/messages [timestamp]` — Show recent messages (optionally since a date)
+- `/delete [on|off]` — Toggle automatic message deletion
+- `/statistics [dd-mm-yy]` — Show statistics for today or a given date (top users, top banned words)
+- `/help [command] [subcommand]` — Show help for commands
 
-Шаблони можуть містити опціональні плейсхолдери:
-- `{name}` - ім'я користувача
-- `{word}` - заборонене слово
+## Message Templates
 
-Приклади шаблонів:
-- "Привіт, {name}!"
-- "Не використовуй слово {word}!"
-- "Привіт, {name}! Не використовуй слово {word}!"
-- "Це слово заборонено!"
+Templates can include:
+- `{name}` — user's first name
+- `{word}` — banned word(s)
 
-## Встановлення
+**Examples:**
+- `Hey, {name}!`
+- `Don't use {word}!`
+- `Hey {name}, don't use {word}!`
+- `This word is not allowed!`
 
-1. Клонуйте репозиторій:
-```bash
-git clone https://github.com/your-username/curse-word-bot.git
-cd curse-word-bot
-```
+## Locale/Language Support
 
-2. Створіть віртуальне середовище та встановіть залежності:
-```bash
-python -m venv venv
-source venv/bin/activate  # для Linux/Mac
-# або
-venv\Scripts\activate  # для Windows
-pip install -r requirements.txt
-```
+You can switch the bot's language per chat using `/locale set <locale>`.  
+Available locales are listed with `/locale list`.  
+Default locales provided: `en` (English), `tem` (Temmie-style English).
 
-3. Створіть файл `.env` на основі `.env.example`:
-```bash
-cp .env.example .env
-```
+## Installation
 
-4. Налаштуйте змінні середовища в `.env`:
-```
-DB_HOST=host
-DB_USER=user
-DB_PASSWORD=password
-DB_NAME=database_name
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/your-username/curse-word-bot.git
+    cd curse-word-bot
+    ```
 
-TELEGRAM_BOT_API=telegram_bot_api_key
+2. Create a virtual environment and install dependencies:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # for Linux/Mac
+    # or
+    venv\Scripts\activate  # for Windows
+    pip install -r requirements.txt
+    ```
 
-LOG_DIR=logs
-LOG_FILE=message_log.json
-LOG_MAX_SIZE=10485760  # 10MB in bytes
+3. Copy the example environment file and configure:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit `.env` and set your database and Telegram bot credentials.
 
-DEFAULT_TEMPLATE="Default template {name} {word}"
-```
+4. Create the database and tables:
+    ```bash
+    mysql -u your_username -p your_database < structure.sql
+    ```
 
-5. Створіть базу даних та таблиці:
-```bash
-mysql -u your_username -p your_database < structure.sql
-```
+5. Run the bot:
+    ```bash
+    python src/main.py
+    ```
 
-6. Запустіть бота:
-```bash
-python src/main.py
-```
+## Running on a Server
 
-## Запуск на сервері
-
-Для запуску бота в фоновому режимі на сервері можна використовувати `nohup`:
+To run the bot in the background:
 ```bash
 nohup python src/main.py > bot.log 2>&1 &
 ```
 
-Або створити systemd сервіс:
+Or use a systemd service:
 ```ini
 [Unit]
 Description=Telegram Curse Word Bot
@@ -117,6 +116,6 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-## Ліцензія
+## License
 
 MIT

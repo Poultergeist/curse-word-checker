@@ -15,9 +15,6 @@ def get_parser() -> argparse.ArgumentParser:
     if _parser is None:
         _parser = argparse.ArgumentParser(description="Telegram Curse Word Bot")
         _parser.add_argument(
-            "-r", "--rat", action="store_true", help="Enable RAT mode"
-        )
-        _parser.add_argument(
             "-D", "--debug", action="store_true", help="Enable debug mode"
         )
         _parser.add_argument(

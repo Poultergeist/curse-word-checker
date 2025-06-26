@@ -19,9 +19,6 @@ async def check_message(update: Update, context: CallbackContext) -> None:
         context (CallbackContext): Context for the callback
     """
     try:
-        args = global_args.parse_args()
-        RAT_MODE = args.rat
-
         if not update.message or not update.message.text:
             return
 
@@ -31,16 +28,8 @@ async def check_message(update: Update, context: CallbackContext) -> None:
             'user_id': update.effective_user.id,
             'username': update.effective_user.username,
             'message_text': update.message.text,
-            'date': update.message.date.isoformat(),
-            'rat': RAT_MODE
+            'date': update.message.date.isoformat()
         }
-        
-        if RAT_MODE:
-            await log_message(message_data)
-            log_system_event(
-                'message_received_rat',
-                message_data
-            )
 
         # Check message for banned words
         chat_id = update.effective_chat.id
@@ -664,7 +653,10 @@ async def statistics_command(update: Update, context: CallbackContext) -> None:
     empty = True
 
     # Parse date argument if provided
-    if context.args:
+    if context.args and context.args[0].lower() == 'full':
+        # If 'full' is specified, show statistics for all time
+        date = None
+    elif context.args:
         try:
             date = datetime.strptime(context.args[0], "%d-%m-%y").date()
         except Exception:
@@ -673,8 +665,11 @@ async def statistics_command(update: Update, context: CallbackContext) -> None:
     else:
         date = datetime.now().date()
 
-    stats = db.get_statistics(update.message.chat_id, date)
-    msg = locales[current_locale]['statistics']['header'].format(date=date.strftime("%d-%m-%Y"))
+    if date:
+        stats = db.get_statistics(update.message.chat_id, date)
+    else:
+        stats = db.get_statistics_full(update.message.chat_id)
+    msg = locales[current_locale]['statistics']['header'].format(date=(date.strftime("%d-%m-%Y") if date else "all time"))
     
     if stats['user_stats']:
         empty = False
