@@ -2,3 +2,7 @@ __pycache__/
 logs/
 venv/
 .env
+
+src/languages/locales/*
+!src/languages/locales/en.json
+!src/languages/locales/tem.json

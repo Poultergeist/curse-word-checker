@@ -1,0 +1,139 @@
+{
+  "error": "hOI! TEMMIE found an oopsie! Something went wrong~",
+  "no_access": "hOI! TEMMIE say u can't do dat!",
+  "word": {
+    "no_args": "hOI! Tell TEMMIE what u want: ban, unban, list, or clear!",
+    "invalid_action": "Nuu, dat not valid! Use: ban, unban, list, or clear, TEMMIE say so!",
+    "list_empty": "No bad words here! TEMMIE so proud!",
+    "list_header": "BANNED WORDS (TEMMIE no like):\n",
+    "cleared": "ALL BAD WORDS GONE! TEMMIE CLEAN!",
+    "too_short": "Say da word to {action}, pwease~ TEMMIE waitin'!",
+    "ban_banned": "Words '{words}' already banned! TEMMIE confused~",
+    "banned_success": "Words '{words}' now in BAD WORD JAIL! TEMMIE guardin'!",
+    "already_banned": "Already in jail: {words} (TEMMIE check twice!)",
+    "unban_not_banned": "Words '{words}' not even banned! TEMMIE go 'hOI?'",
+    "unbanned_success": "Words '{words}' now free from jail! TEMMIE happy!",
+    "already_unbanned": "Was free already: {words} (TEMMIE nap now)"
+  },
+  "mod": {
+    "no_args": "hOI! Say add, delete, or list!",
+    "invalid_action": "Nuu, dat not valid! Use: add, delete, or list, TEMMIE say!",
+    "list_empty": "No mod friends here... TEMMIE lonely.",
+    "list_header": "MOD FRIENDS (TEMMIE approve!):\n",
+    "add_superadmin": "Dis hooman too powahful! TEMMIE scared, can't mod, sowwy~",
+    "add_already": "Dis friend is mod already! TEMMIE clap!",
+    "add_success": "YAY! {user} now MOD FRIEND! TEMMIE dance!",
+    "delete_superadmin": "Dis hooman too powahful! TEMMIE run away, can't remove, sowwy~",
+    "delete_success": "Bye bye mod friend {user}, TEMMIE wave!",
+    "reply": "Pwease reply to da hooman u wanna add/delete as mod! TEMMIE need reply!"
+  },
+  "template": {
+    "no_args": "Say add, delete, or list! TEMMIE wanna know!",
+    "invalid_action": "Nuu, dat not valid! Use: add, delete, or list, TEMMIE say!",
+    "list_empty": "No message templates here... TEMMIE sad.",
+    "list_header": "MESSAGE TEMPLATES (TEMMIE collection!):\n",
+    "list_item": "- ID: {template_id},\n\tTemplate: {template} (TEMMIE like!)",
+    "add_no_text": "Say da template text to add! TEMMIE listenin'!",
+    "add_success": "Template added! YAY TEMMIE!",
+    "remove_no_id": "Say da template ID to yeet! TEMMIE need number!",
+    "remove_success": "Template go bye bye! TEMMIE wave paw!",
+    "remove_value_error": "Dat not a valid ID! TEMMIE go 'hOI?'"
+  },
+  "messages": {
+    "recent": "Recent messages (TEMMIE peek!):\n",
+    "recent_item": "- @{user}: {message} (TEMMIE see)",
+    "recent_empty": "Message not found! TEMMIE look everywhere, sowwy."
+  },
+  "delete": {
+    "show": "Message deletion is {status}, TEMMIE toggle!",
+    "invalid_action": "Nuu, dat not valid! Use: on or off, TEMMIE say!",
+    "switch": "Message deletion now {value}! TEMMIE flip switch!"
+  },
+  "locale": {
+    "no_args": "hOI! TEMMIE wanna know: list, current, or set? (TEMMIE curious!)",
+    "invalid_action": "Nuu, dat not a thing! Use: list, current, or set, TEMMIE say so!!",
+    "list_empty": "No talky-talky languages here... TEMMIE need more words!!",
+    "list": "LANGUAGES TEMMIE CAN SPEAK (so smrt!):\n",
+    "current_empty": "No language picked yet! TEMMIE lost in translation~",
+    "current": "TEMMIE speakin' dis language: {locale} (TEMMIE nod!)",
+    "set_no_locale": "Say da language code to set! TEMMIE waitin' for da magic word!",
+    "set_invalid_locale": "Nuu, {locale} not a real language! TEMMIE go 'hOI???'",
+    "set": "YAY! Chat now in {locale}! TEMMIE flex language muscle!"
+  },
+  "statistics": {
+    "format": "Say date like dd-mm-yy! TEMMIE need format!",
+    "header": "📊 STATISTICS for {date} (TEMMIE math!):\n\n",
+    "users_header": "👤 Top hoomans (by bad words, TEMMIE judge!):\n",
+    "users_item": "{id}. @{user} — {count} (TEMMIE count!)\n",
+    "words_header": "🚫 Top bad words used (TEMMIE no like!):\n",
+    "words_item": "{id}. {word} — {count} (TEMMIE frown)\n",
+    "most_banned": "📝 Most banned message (TEMMIE shocked!):\n{message}\n",
+    "empty": "⛔️ No stats for dis date! TEMMIE nap ⛔️"
+  },
+  "bot_add": {
+    "no_new": "No new friends... TEMMIE lonely.",
+    "welcome": "hOI! TEMMIE bad word bot here! Use /help for commandses!"
+  },
+  "help": {
+    "help_short": {
+      "header": "COMMANDSES FOR U, FRIEND! (TEMMIE cheer!):",
+      "word_header": "BAD WORD MAGIC (TEMMIE protect!):",
+      "word_ban": "Ban da bad word! (TEMMIE hiss!)",
+      "word_unban": "Unban da word! (TEMMIE forgive!)",
+      "word_list": "Show all da bad words! (TEMMIE keep list!)",
+      "word_clear": "Yeet all bad words! (TEMMIE sweep!)",
+      "mod_header": "MOD FRIEND MAGIC (TEMMIE trust!):",
+      "mod_add": "Add mod friend! (TEMMIE approve!)",
+      "mod_delete": "Yeet mod friend! (TEMMIE sad!)",
+      "mod_list": "Show all mod friends! (TEMMIE wave!)",
+      "template_header": "MESSAGE TEMPLATE MAGIC (TEMMIE write!):",
+      "template_add": "Add message template! (TEMMIE scribble!)",
+      "template_delete": "Yeet message template! (TEMMIE erase!)",
+      "template_list": "Show message templates! (TEMMIE show off!)",
+      "locale_header": "LANGUAGE MAGIC (TEMMIE learn!):",
+      "locale_list": "Show languages! (TEMMIE polyglot!)",
+      "locale_current": "Show current language! (TEMMIE check!)",
+      "locale_set": "Set language for chat! (TEMMIE switch!)",
+      "other_header": "OTHER COMMANDSES (TEM extra!):",
+      "other_messages": "Show recent messages! (TEMMIE spy!)",
+      "other_delete": "Toggle message deletion! (TEMMIE flip!)",
+      "other_statistics": "Show stats for today or date! (TEMMIE math!)",
+      "other_help": "Use /help <command> for more help!\n",
+      "error": "TEm do not know what u mean: {command}\nTEMMIE say use /help <command> for more help!\nExample: /help word ban (TEMMIE so helpful!)"
+    },
+    "help_texts": {
+      "word": {
+        "none": "BAD WORD MAGIC COMMANDSES (TEMMIE teach u!)\nHow2 do: {help_template}\n(TEMMIE so smrt!)",
+        "ban": "BAN DA BAD WORD! (TEMMIE hissss!)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE guard chat!)",
+        "unban": "FREE DA WORD FROM JAIL! (TEMMIE merciful~)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE open door!)",
+        "list": "SHOW ALL BAD WORDS! (TEMMIE keep eye 👀)\nHow2 do: {help_template}\n(TEMMIE count!)",
+        "clear": "YEET ALL BAD WORDS! (TEMMIE sweep sweep~)\nHow2 do: {help_template}\n(TEMMIE clean house!)"
+      },
+      "mod": {
+        "none": "MOD FRIEND COMMANDSES (TEMMIE trust u!)\nHow2 do: {help_template}\n(TEMMIE wave to mod FRIEND!)",
+        "add": "ADD MOD FRIEND! (TEMMIE happy dance!)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE clap paws!)",
+        "delete": "YEET MOD FRIEND! (TEMMIE sad but fair~)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE wave bye!)",
+        "list": "SHOW ALL MOD FRIENDS! (TEMMIE count frens!)\nHow2 do: {help_template}\n(TEMMIE proud!)"
+      },
+      "template": {
+        "none": "TEMPLATE MAGIC COMMANDSES (TEMMIE creative~)\nHow2 do: {help_template}\n(TEMMIE show off art!)",
+        "add": "ADD NEW MESSAGE TEMPLATE! (TEMMIE scribble scribble~)\nHow2 do: {help_template}\nLooky examples: {help_ex}\nU can use {{name}} for fren name, {{word}} for bad word (TEMMIE tip!)\n",
+        "delete": "YEET MESSAGE TEMPLATE! (TEMMIE erase erase~)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE clean up!)",
+        "list": "SHOW ALL MESSAGE TEMPLATES! (TEMMIE proud of collection!)\nHow2 do: {help_template}\n(TEMMIE show u!)"
+      },
+      "locale": {
+        "none": "LANGUAGE MAGIC COMMANDSES (TEMMIE polyglot, wow!)\nHow2 do: {help_template}\n(TEMMIE switch tongue!)",
+        "list": "SHOW LANGUAGES! (TEMMIE list all talky-talk!)\nHow2 do: {help_template}\n(TEMMIE so smrt!)",
+        "current": "SHOW CURRENT LANGUAGE! (TEMMIE check check~)\nHow2 do: {help_template}\n(TEMMIE nod!)",
+        "set": "SET LANGUAGE FOR CHAT! (TEMMIE flex language muscle!)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE magic!)\n"
+      },
+      "help": {
+        "none": "SHOW HELP MESSAGE! (TEMMIE help fren!)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE helpful!)\n",
+        "help": "Realy? (TEMMIE giggle~!)"
+      },
+      "messages": "SHOW RECENT MESSAGES! (TEMMIE peek peek~)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE see all!)\n",
+      "delete": "TOGGLE AUTO MESSAGE DELETION! (TEMMIE flip switch~)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE sneaky!)\n",
+      "statistics": "SHOW STATS FOR TODAY OR DATE! (TEMMIE math time!)\nHow2 do: {help_template}\nLooky examples: {help_ex} (TEMMIE count numbers!)\n"
+    }
+  }
+}
