@@ -61,18 +61,29 @@ def execute_db_query(query: str, params=None, fetch: bool = False) -> list | Non
         if conn:
             conn.close()
 
-def ensure_chat_exists(chat_id: int, chat_name: str) -> None:
+def ensure_chat_exists(chat_id: int, chat_name: str) -> bool:
     """
-    Ensure chat exists in database, create if it doesn't
+    Ensure chat exists in database, create if it doesn't.
     
     Args:
         chat_id (int): ID of the chat
         chat_name (str): Name of the chat
+    
+    Returns:
+        bool: True if chat already existed, False if it was created
     """
-    execute_db_query(
-        "INSERT IGNORE INTO chats (id, name) VALUES (%s, %s)",
-        (chat_id, chat_name)
+    result = execute_db_query(
+        "SELECT 1 FROM chats WHERE id = %s",
+        (chat_id,),
+        fetch=True
     )
+    existed = bool(result)
+    if not existed:
+        execute_db_query(
+            "INSERT IGNORE INTO chats (id, name) VALUES (%s, %s)",
+            (chat_id, chat_name)
+        )
+    return existed
 
 def add_banned_word(word: str, chat_id: int, user_id: int, chat_name: str) -> None:
     """

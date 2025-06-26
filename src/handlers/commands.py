@@ -7,9 +7,40 @@ import re
 from datetime import datetime
 from utils import args as global_args
 from languages.language_core import get_locales, reinitialize_locales, list_locales, get_locales_list
+from functools import wraps
 
 locales = get_locales()
 
+def command_middleware(func):
+    log_system_event(
+        'command_middleware',
+        {
+            'command': func.__name__,
+            'message': 'Command middleware initialized'
+        }
+    )
+    @wraps(func)
+    async def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        chat = update.effective_chat
+        user = update.effective_user
+
+        if chat.id > 0:
+            chat_title = user.username or user.first_name
+        else:
+            chat_title = chat.title or f"Chat {chat.id}"
+
+        chat_created = not db.ensure_chat_exists(chat.id, chat_title)
+        result = await func(update, context, *args, **kwargs)
+
+        if chat_created:
+            await on_bot_added(update, context)
+            if not db.check_if_moderator(chat.id, user.id) is 0:
+                db.new_moderator(user.id, user.username, chat.id)
+
+        return result
+    return wrapper
+
+@command_middleware
 async def check_message(update: Update, context: CallbackContext) -> None:
     """
     Check messages for banned words
@@ -83,6 +114,7 @@ async def check_message(update: Update, context: CallbackContext) -> None:
         )
         await update.message.reply_text("An error occurred while executing the command.")
 
+@command_middleware
 async def word_command(update: Update, context: CallbackContext) -> None:
     """
     Handle word-related commands
@@ -243,6 +275,7 @@ async def word_command(update: Update, context: CallbackContext) -> None:
             )
             await update.message.reply_text(locales[current_locale]['error'])
 
+@command_middleware
 async def mod_command(update: Update, context: CallbackContext) -> None:
     """
     Handle moderator-related commands
@@ -311,7 +344,7 @@ async def mod_command(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(locales[current_locale]['mod']['reply'])
         return
     
-
+@command_middleware
 async def template_command(update: Update, context: CallbackContext) -> None:
     """
     Handle template-related commands
@@ -451,6 +484,7 @@ async def template_command(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(locales[current_locale]['template']['invalid_action'])
     return
 
+@command_middleware
 async def messages_command(update: Update, context: CallbackContext) -> None:
     """
     Show recent messages
@@ -478,6 +512,7 @@ async def messages_command(update: Update, context: CallbackContext) -> None:
     )
     await update.message.reply_text(message)
 
+@command_middleware
 async def delete_command(update: Update, context: CallbackContext) -> None:
     """
     Toggle message deletion
@@ -509,6 +544,7 @@ async def delete_command(update: Update, context: CallbackContext) -> None:
     db.delete_messages_change(update.message.chat_id, value == 'on')
     await update.message.reply_text(locales[current_locale]['delete']['switch'].format(value=value))
 
+@command_middleware
 async def locale_command(update: Update, context: CallbackContext) -> None:
     """
     Handle locale-related commands
@@ -577,7 +613,8 @@ async def locale_command(update: Update, context: CallbackContext) -> None:
                 },
                 'ERROR'
             )
-        
+
+@command_middleware
 async def reinitialize_locales_command(update: Update, context: CallbackContext) -> None:
     """
     Reinitialize locales from files
@@ -615,7 +652,8 @@ async def reinitialize_locales_command(update: Update, context: CallbackContext)
             'ERROR'
         )
         await update.message.reply_text(locales[current_locale]['error'])
-        
+
+@command_middleware        
 async def all_locales_command(update: Update, context: CallbackContext) -> None:
     """
     Show all available locales
@@ -638,6 +676,7 @@ async def all_locales_command(update: Update, context: CallbackContext) -> None:
     
     await update.message.reply_text("Available locales:\n" + "\n".join(locales))
 
+@command_middleware
 async def statistics_command(update: Update, context: CallbackContext) -> None:
     """
     Show statistics for today or a given date
@@ -774,6 +813,7 @@ async def on_bot_removed(update: Update, context: CallbackContext) -> None:
         }
     )
 
+@command_middleware
 async def help_command(update: Update, context: CallbackContext) -> None:
     """
     Show help message
