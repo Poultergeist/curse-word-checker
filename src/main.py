@@ -20,7 +20,8 @@ from handlers.commands import (
     locale_command,
     reinitialize_locales_command,
     all_locales_command,
-    handle_callback
+    handle_callback,
+    start_command
 )
 
 # Load environment variables
@@ -66,6 +67,7 @@ def main() -> None:
     application.add_handler(CommandHandler("locale", locale_command))
     application.add_handler(CommandHandler("reinitialize_locales", reinitialize_locales_command))
     application.add_handler(CommandHandler("all_locales", all_locales_command))
+    application.add_handler(CommandHandler("start", start_command))
     
     # Add callback query handler
     application.add_handler(CallbackQueryHandler(handle_callback))

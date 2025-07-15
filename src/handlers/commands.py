@@ -1,3 +1,5 @@
+import base64
+import json
 from anyio import sleep
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, BotCommand, BotCommandScopeChat
 from telegram.ext import CallbackContext, ContextTypes
@@ -151,9 +153,11 @@ async def word_command(update: Update, context: CallbackContext) -> None:
 
     if chat_id < 0:
         # Create inline keyboard with button to start private chat
-        keyboard = [[InlineKeyboardButton("Continue in Private Chat", url=f"https://t.me/{context.bot.username}?start=hello", callback_data="start_private_chat")]]
+        payload = {"chat_id": chat_id, "command": "word", "action": action, "params": context.args[1:]}
+        encoded = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+        keyboard = [[InlineKeyboardButton("Continue in Private Chat", url=f"https://t.me/{context.bot.username}?start=settings__{chat_id} command__word")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("From now chat settings can be changed only in private chat with me", reply_markup=reply_markup)
+        await update.message.reply_text(f"From now chat settings can be changed only in *private* chat with me.\n\n payload: \n```\n{payload}```\n\nEncoded payload:\n```{encoded}```", reply_markup=reply_markup, parse_mode='Markdown')
         return
 
     if db.check_if_moderator(chat_id, update.message.from_user.id) is False:
@@ -979,6 +983,65 @@ def get_command_help(command: str, locale_help: list, subcommand: str = None) ->
     return ""
 
 @command_middleware
+async def start_command(update: Update, context: CallbackContext) -> None:
+    """
+    Handle /start command
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+    
+    # Extract start parameter from URL (if user clicked a button with URL)
+    start_param = None
+    if context.args:
+        start_param = context.args[0]
+        
+    # Properly escape curly braces and backslashes for MarkdownV2
+    args_text = str(context.args).replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('{', '\\{').replace('}', '\\}').replace('.', '\\.').replace('-', '\\-').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"context\\.args:\n```\n{args_text}\n```",
+        parse_mode='MarkdownV2'
+    )
+    
+    if start_param:
+        start_params = start_param.split('___')
+    
+    start_message = await update.message.reply_text(
+        "Welcome! You can configure bot settings here. Use /help to see available commands."
+    )
+    
+    # Handle different start parameters
+    for start_param in start_params:
+        if start_param.startswith("settings_"):
+            affected_chat_id = start_param.split("__")[1]
+            start_message = await start_message.edit_text(
+                text=f"{start_message.text}\n\nSettings for chat {affected_chat_id} have been configured. You can now manage this chat's settings."
+            )
+        elif start_param.startswith("command_"):
+            command_name = start_param.split("__")[1]
+            start_message = await start_message.edit_text(
+                text=f"{start_message.text}\n\nYou can now use the /{command_name} command to manage this chat's settings."
+            )
+        elif start_param.startswith("action_"): 
+            action = start_param.split("__")[1]
+            start_message = await start_message.edit_text(
+                text=f"{start_message.text}\n\nYou can now perform the {action} action in this chat."
+            )
+        elif start_param.startswith("args_"):
+            args = (start_param.split("__")[1]).split('_')
+            start_message = await start_message.edit_text(
+                text=f"{start_message.text}\n\nYou can now use the following arguments: {', '.join(args)}."
+            )
+        elif start_param == "hello":
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Hello! You came from the private chat button. How can I help you with bot settings?"
+            )
+            
+
+@command_middleware
 async def handle_callback(update: Update, context: CallbackContext) -> None:
     """
     Handle callback queries
@@ -996,9 +1059,21 @@ async def handle_callback(update: Update, context: CallbackContext) -> None:
             'chat_id': update.effective_chat.id
         }
     )
-    update.callback_query.answer()
-    context.bot.answer_callback_query(
-        update.callback_query.id,
-        text="Hallo",
-        show_alert=False
-    )
+    
+    # Extract callback data
+    callback_data = update.callback_query.data
+    
+    # Handle different callback data
+    if callback_data == "start_private_chat":
+        await update.callback_query.edit_message_text(
+            text="Great! Now you can configure bot settings in this private chat. Use /help to see available commands."
+        )
+    else:
+        # Handle other callback data
+        await update.callback_query.answer(
+            text="Unknown action",
+            show_alert=False
+        )
+        
+    # Always answer the callback query to remove loading state
+    await update.callback_query.answer()
