@@ -1,4 +1,5 @@
-from telegram import Update, BotCommand, BotCommandScopeChat
+from anyio import sleep
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, BotCommand, BotCommandScopeChat
 from telegram.ext import CallbackContext, ContextTypes
 from database import db
 from utils.logger import log_message, log_system_event
@@ -146,6 +147,13 @@ async def word_command(update: Update, context: CallbackContext) -> None:
             return
         
         await update.message.reply_text(f"{locales[current_locale]['word']['list_header']}" + "\n".join(f"- {word}" for word in words))
+        return
+
+    if chat_id < 0:
+        # Create inline keyboard with button to start private chat
+        keyboard = [[InlineKeyboardButton("Continue in Private Chat", url=f"https://t.me/{context.bot.username}?start=hello", callback_data="start_private_chat")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("From now chat settings can be changed only in private chat with me", reply_markup=reply_markup)
         return
 
     if db.check_if_moderator(chat_id, update.message.from_user.id) is False:
@@ -969,3 +977,28 @@ def get_command_help(command: str, locale_help: list, subcommand: str = None) ->
             return help_texts[command].get(subcommand, help_texts[command][None])
         return help_texts[command]
     return ""
+
+@command_middleware
+async def handle_callback(update: Update, context: CallbackContext) -> None:
+    """
+    Handle callback queries
+    
+    Args:
+        update (Update): Incoming update from Telegram
+        context (CallbackContext): Context for the callback
+    """
+    log_system_event(
+        'callback_query',
+        {
+            'query_id': update.callback_query.id,
+            'data': update.callback_query.data,
+            'user_id': update.effective_user.id,
+            'chat_id': update.effective_chat.id
+        }
+    )
+    update.callback_query.answer()
+    context.bot.answer_callback_query(
+        update.callback_query.id,
+        text="Hallo",
+        show_alert=False
+    )

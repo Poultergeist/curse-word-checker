@@ -2,7 +2,7 @@ import argparse
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from utils.messages_migration_helper import load_from_db_to_json, load_from_json_to_db
 from utils import args as global_args
 
@@ -19,7 +19,8 @@ from handlers.commands import (
     on_bot_removed,
     locale_command,
     reinitialize_locales_command,
-    all_locales_command
+    all_locales_command,
+    handle_callback
 )
 
 # Load environment variables
@@ -66,6 +67,8 @@ def main() -> None:
     application.add_handler(CommandHandler("reinitialize_locales", reinitialize_locales_command))
     application.add_handler(CommandHandler("all_locales", all_locales_command))
     
+    # Add callback query handler
+    application.add_handler(CallbackQueryHandler(handle_callback))
     
     # Handle new chat members (for bot being added to chat)
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, on_bot_added))
@@ -74,7 +77,7 @@ def main() -> None:
     
     # Handle regular messages
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-
+    
     # Start the Bot
     application.run_polling()
 
