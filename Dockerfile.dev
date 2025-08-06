@@ -1,0 +1,26 @@
+# Dockerfile.dev
+
+FROM python:3.11-slim
+
+# Встановлення системних залежностей (для mysqlclient)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    pkg-config \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+# Робоча директорія
+WORKDIR /app
+
+# Встановлення pip-залежностей
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копіюємо весь код (якщо треба — можеш виключити через .dockerignore)
+COPY . .
+
+# Встановлюємо watchdog для авто-ребута при зміні коду
+RUN pip install watchdog[watchmedo]
+
+# Запускаємо через watchmedo — авто reload
+CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "src/main.py"]
